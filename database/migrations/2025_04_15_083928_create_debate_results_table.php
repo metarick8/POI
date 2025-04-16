@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger("debater_role_id");
             $table->smallInteger("rank");
             $table->foreign("debate_id")->references("id")->on("debates")->onDelete("cascade");
-            $table->foreign("debater_role_id")->references("id")->on("debater_role")->onDelete("cascade");
+            $table->foreign("debater_role_id")->references("id")->on("debater_roles")->onDelete("cascade");
             $table->timestamps();
         });
     }
