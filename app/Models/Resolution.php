@@ -16,7 +16,7 @@ class Resolution extends Model
         return $this->belongsTo(Resolution_sort::class, 'sort_id', 'id');
     }
 
-    public function debates()
+    public function debates ()
     {
         return $this->hasMany(Debate::class, 'resolution_id', 'id');
     }

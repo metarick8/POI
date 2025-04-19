@@ -9,6 +9,28 @@ use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
+/**
+ * @OA\Get(
+ *     path="/api/register",
+ *     tags={"Users"},
+ *     summary="Register users",
+ *     description="Add a new user to the application",
+ *     @OA\Response(
+ *         response=200,
+ *         description="successful operation"
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Bad request"
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="Invalid credientials"
+ *     )
+ * )
+ */
+
+
 class AuthController extends Controller
 {
     public function __construct()

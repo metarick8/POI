@@ -1,0 +1,44 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Your API Title",
+        "description": "Your API Description",
+        "contact": {
+            "email": "your-email@example.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/api/register": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Register users",
+                "description": "Add a new user to the application",
+                "operationId": "2ffdf3ea881515cc62367a9cdeefe16c",
+                "responses": {
+                    "200": {
+                        "description": "successful operation"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Invalid credientials"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Users",
+            "description": "Users"
+        }
+    ]
+}
