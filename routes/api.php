@@ -11,10 +11,10 @@ use Illuminate\Http\Request;
     Route::post('login', 'login');
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
-    // Route::get('user', 'getUser');
+    Route::get('profile', 'profile');
 
     });
-    Route::get("profile", [CoachController::class, "profile"]);
+    // Route::get("profile", [CoachController::class, "profile"]);
     //Route::post('/documentation')->withoutMiddleware('');
     // Route::post('/register', function (Request $request) {
     //     return response()->json(['message' => 'Test successful']);
