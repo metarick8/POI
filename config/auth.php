@@ -35,17 +35,28 @@ return [
     |
     */
 
-'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
+    'guards' => [
+        'user' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
+        ],
+        'debater' => [
+            'driver' => 'jwt',
+            'provider' => 'debaters',
+        ],
+        'judge' => [
+            'driver' => 'jwt',
+            'provider' => 'judges',
+        ],
+        'coach' => [
+            'driver' => 'jwt',
+            'provider' => 'coaches',
+        ],
+        'admin' => [
+            'driver' => 'jwt',
+            'provider' => 'admins',
+        ],
     ],
-    'api' => [
-        'driver' => 'jwt',
-        'provider' => 'users', 
-        'hash' => false,
-    ],
-],
 
     /*
     |--------------------------------------------------------------------------
@@ -67,13 +78,25 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Models\User::class,
+        ],
+        'debaters' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Debater::class,
+        ],
+        'judges' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Judge::class,
+        ],
+        'coaches' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Coach::class,
+        ],
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Admin::class,
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*

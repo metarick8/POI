@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -51,13 +52,13 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(Debater::class, 'user_id', 'id');
     }
 
-    public function coach()
+    public function coach():HasOne
     {
         return $this->hasOne(Coach::class, 'user_id', 'id');
     }
 
     public function judge()
     {
-        return $this->hasOne(Judge::class, 'user_id', 'id');    
+        return $this->hasOne(Judge::class, 'user_id', 'id');
     }
 }

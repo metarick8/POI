@@ -1,19 +1,21 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CoachController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
 
     Route::controller(AuthController::class)->group(function () {
-    Route::post('register', 'register');
+    Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach|admin');
     Route::post('login', 'login');
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
-    Route::get('user', 'getUser');
-    });
+    // Route::get('user', 'getUser');
 
-    //Route::post('/register', [AuthController::class, 'register']);
+    });
+    Route::get("profile", [CoachController::class, "profile"]);
+    //Route::post('/documentation')->withoutMiddleware('');
     // Route::post('/register', function (Request $request) {
     //     return response()->json(['message' => 'Test successful']);
     // });
