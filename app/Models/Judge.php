@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Judge extends Model implements JWTSubject
+class Judge extends Authenticatable implements JWTSubject
 {
     protected $fillable = [
         'user_id',

@@ -13,32 +13,504 @@
         "version": "1.0.0"
     },
     "paths": {
-        "/api/register": {
-            "get": {
+        "/api/register/user": {
+            "post": {
                 "tags": [
-                    "Users"
+                    "Authentication"
                 ],
-                "summary": "Register users",
-                "description": "Add a new user to the application",
-                "operationId": "2ffdf3ea881515cc62367a9cdeefe16c",
+                "summary": "Add user",
+                "description": "Add new mobile user to the application",
+                "operationId": "878228d90ce6296c71ee74e3a4c84132",
+                "requestBody": {
+                    "description": "User register credentials",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "profile_picture"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Jad"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Alhalabi"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "jad@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "profile_picture": {
+                                        "description": "Profile picture file upload",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
-                    "200": {
-                        "description": "successful operation"
+                    "201": {
+                        "description": "User has been created!"
                     },
                     "400": {
                         "description": "Bad request"
                     },
                     "401": {
                         "description": "Invalid credientials"
+                    },
+                    "422": {
+                        "description": "Unprocessable Content"
                     }
                 }
+            }
+        },
+        "/api/register/coach": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Add coach",
+                "description": "Add new coach to the application",
+                "operationId": "2787183a78b186144d732e919faf0a99",
+                "requestBody": {
+                    "description": "Coach register credentials",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "profile_picture"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Coach first name"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Coach last name"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "coach@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "profile_picture": {
+                                        "description": "Profile picture file upload",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User has been created!"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Invalid credientials"
+                    },
+                    "422": {
+                        "description": "Unprocessable Content"
+                    }
+                }
+            }
+        },
+        "/api/register/debater": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Add debater",
+                "description": "Add new  debater to the application",
+                "operationId": "3043e2ceb79a236ddb1d0372adc7ab8e",
+                "requestBody": {
+                    "description": "Debater register credentials",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "profile_picture"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Debater first name"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Debater last name"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "debater@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "coach_id": {
+                                        "description": "current coach id",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "profile_picture": {
+                                        "description": "Profile picture file upload",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Coach has been created!"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Invalid credientials"
+                    },
+                    "422": {
+                        "description": "Unprocessable Content"
+                    }
+                }
+            }
+        },
+        "/api/register/judge": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Add judge",
+                "description": "Add new judge to the application",
+                "operationId": "14fec7cca552ae5c460732a11520bf0e",
+                "requestBody": {
+                    "description": "Judge register credentials",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "profile_picture"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Judge first name"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Judge last name"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "judge@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    },
+                                    "profile_picture": {
+                                        "description": "Profile picture file upload",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Judge has been created!"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Invalid credientials"
+                    },
+                    "422": {
+                        "description": "Unprocessable Content"
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Authenticate user",
+                "operationId": "a3b306d14572d1f4bd6c064b3233e7b8",
+                "requestBody": {
+                    "description": "Login credentials",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "jad@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "12345678"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/api/profile": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get authenticated user profile",
+                "description": "Returns profile details based on the token (User, Coach, Debater, Judge)",
+                "operationId": "d32e56b6274eb68e980da6d91fbe9fd8",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "oneOf": [
+                                        {
+                                            "schema": "User",
+                                            "required": [
+                                                "id",
+                                                "first_name",
+                                                "last_name",
+                                                "email"
+                                            ],
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "first_name": {
+                                                    "type": "string",
+                                                    "example": "Jad"
+                                                },
+                                                "last_name": {
+                                                    "type": "string",
+                                                    "example": "Alhalabi"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "jadalhalabi88@gmail.com"
+                                                },
+                                                "profile_picture": {
+                                                    "type": "string",
+                                                    "example": "random link"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        {
+                                            "schema": "Coach",
+                                            "required": [
+                                                "id",
+                                                "first_name",
+                                                "last_name",
+                                                "email",
+                                                "team"
+                                            ],
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "first_name": {
+                                                    "type": "string",
+                                                    "example": "Coach Name"
+                                                },
+                                                "last_name": {
+                                                    "type": "string",
+                                                    "example": "Last Name"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "coach@email.com"
+                                                },
+                                                "team": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "first_name": {
+                                                                "type": "string",
+                                                                "example": "Debater first name"
+                                                            },
+                                                            "last_name": {
+                                                                "type": "string",
+                                                                "example": "Debater last name"
+                                                            },
+                                                            "email": {
+                                                                "type": "string",
+                                                                "example": "debater@email.com"
+                                                            },
+                                                            "profile_picture": {
+                                                                "type": "string",
+                                                                "example": "random link"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        {
+                                            "schema": "Debater",
+                                            "required": [
+                                                "id",
+                                                "first_name",
+                                                "last_name",
+                                                "email",
+                                                "coach_name"
+                                            ],
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 20
+                                                },
+                                                "first_name": {
+                                                    "type": "string",
+                                                    "example": "Debater Name"
+                                                },
+                                                "last_name": {
+                                                    "type": "string",
+                                                    "example": "Last Name"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "debater@email.com"
+                                                },
+                                                "profile_picture": {
+                                                    "type": "string",
+                                                    "example": "random link"
+                                                },
+                                                "coach_name": {
+                                                    "type": "string",
+                                                    "example": "Coach first name + Coach last name"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing token"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "description": "Enter your JWT token in the format: Bearer {token}",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
             }
         }
     },
     "tags": [
         {
-            "name": "Users",
-            "description": "Users"
+            "name": "Authentication",
+            "description": "Authentication"
         }
     ]
 }
