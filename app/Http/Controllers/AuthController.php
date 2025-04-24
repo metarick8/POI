@@ -17,8 +17,8 @@ use App\Models\Coach;
 use App\Models\Debater;
 use App\Models\Judge;
 use App\Models\User;
+use App\Services\AuthService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Cloudinary\Api\Upload\UploadApi;
@@ -37,9 +37,11 @@ class AuthController extends Controller
 {
     use JSONResponseTrait;
 
-    public function __construct()
-    {
+    protected $authService;
 
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
         //$this->middleware('auth:api', ['except' => ['login','register']]);
     }
 
@@ -120,19 +122,9 @@ class AuthController extends Controller
 
     public function registerUser(UserRegisterRequest $request)
     {
-        $user = User::create([
-            'first_name' => $request->get('first_name'),
-            'last_name' => $request->get('last_name'),
-            'email' => $request->get('email'),
-            'password' => Hash::make($request->get('password')),
-            'profile_picture_url' => $request->get('profile_picture_url'),
-            'pp_public_id' => $request->get('public_id'),
-        ]);
-
-        $token = Auth::guard('user')->login($user);
-        return $this->successResponse("User has been created!", [
-            "token" => $token
-        ], 201);
+        if ($this->authService->createUser($request) != null)
+            return $this->successResponse("User has been created!", '', 201);
+        return $this->errorResponse("Something went wrong!", '');
     }
 
     /**
@@ -192,28 +184,9 @@ class AuthController extends Controller
 
     public function registerCoach(CoachRegisterRequest $request)
     {
-        try {
-            $user = User::create([
-                'first_name' => $request->get('first_name'),
-                'last_name' => $request->get('last_name'),
-                'email' => $request->get('email'),
-                'password' => Hash::make($request->get('password')),
-                'profile_picture_url' => $request->get('profile_picture_url'),
-                'pp_public_id' => $request->get('public_id'),
-            ]);
-
-            Coach::create([
-                'user_id' => $request->get('user_id')
-            ]);
-
-            $token = Auth::guard('coach')->login($user);
-
-            return $this->successResponse("Coach has been created!", [
-                "token" => $token
-            ], 201);
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Could not create token'], 500);
-        }
+        if ($this->authService->createCoach($request) != null)
+            return $this->successResponse("Coach has been created!", '', 201);
+        return $this->errorResponse("Something went wrong!", '');
     }
 
     /**
@@ -274,29 +247,9 @@ class AuthController extends Controller
 
     public function registerDebater(DebaterRegisterRequest $request)
     {
-        try {
-            $user = User::create([
-                'first_name' => $request->get('first_name'),
-                'last_name' => $request->get('last_name'),
-                'email' => $request->get('email'),
-                'password' => Hash::make($request->get('password')),
-                'profile_picture_url' => $request->get('profile_picture_url'),
-                'pp_public_id' => $request->get('public_id'),
-            ]);
-
-            Debater::create([
-                'user_id' => $user->id,
-                'coach_id' => $request->get('coach_id'),
-            ]);
-
-            $token = Auth::guard('debater')->login($user);
-
-            return $this->successResponse("Debater has been created!", [
-                "token" => $token
-            ], 201);
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Could not create token'], 500);
-        }
+        if ($this->authService->createDebater($request) != null)
+            return $this->successResponse("Debater has been created!", '', 201);
+        return $this->errorResponse("Something went wrong!", '');
     }
 
     /**
@@ -356,28 +309,9 @@ class AuthController extends Controller
 
     public function registerJudge(JudgeRegisterRequest $request)
     {
-        try {
-            $user = User::create([
-                'first_name' => $request->get('first_name'),
-                'last_name' => $request->get('last_name'),
-                'email' => $request->get('email'),
-                'password' => Hash::make($request->get('password')),
-                'profile_picture_url' => $request->get('profile_picture_url'),
-                'pp_public_id' => $request->get('public_id'),
-            ]);
-
-            Judge::create([
-                'user_id' => $user->id,
-            ]);
-
-            $token = Auth::guard('judge')->login($user);
-
-            return $this->successResponse("Judge has been created!", [
-                "token" => $token
-            ], 201);
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Could not create token'], 500);
-        }
+        if ($this->authService->createJudge($request) != null)
+            return $this->successResponse("Judge has been created!", '', 201);
+        return $this->errorResponse("Something went wrong!", '');
     }
 
     /**
@@ -425,31 +359,23 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request)
     {
-        try {
-            $email = $request->get('email');
-            $password = $request->get('password');
+        $email = $request->get('email');
+        $password = $request->get('password');
+        if (!Auth::guard('user')->attempt(['email' => $email, 'password' => $password]))
+            return response()->json(['error' => 'Unauthorized'], 401);
+        $user = Auth::guard('user')->user();
+        [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
+        if (!$actorResource)
+            return response()->json(['error' => 'Unauthorized'], 401);
 
-            if (!Auth::guard('user')->attempt(['email' => $email, 'password' => $password])) {
-                return response()->json(['error' => 'Unauthorized'], 401);
-            }
+        $token = Auth::guard($actor)->login($user);
 
-            $user = Auth::guard('user')->user();
-
-            [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
-            if (!$actorResource) {
-                return response()->json(['error' => 'Unauthorized'], 401);
-            }
-
-            $token = Auth::guard($actor)->login($user);
-
-            return $this->successResponse("LoggedIn successfully !", [
-                "token" => $token,
-                "guard" => $actor,
-            ]);
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Could not create token'], 500);
-        }
+        return $this->successResponse("LoggedIn successfully !", [
+            "token" => $token,
+            "guard" => $actor,
+        ]);
     }
+
     /**
      * @OA\Get(
      *     path="/api/profile",
@@ -525,16 +451,9 @@ class AuthController extends Controller
 
     public function profile()
     {
-        try {
-            if (!$user = JWTAuth::parseToken()->authenticate()) {
-                return response()->json(['error' => 'User not found'], 404);
-            }
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Invalid token'], 400);
-        }
-
+        if (!$user = JWTAuth::parseToken()->authenticate())
+            return response()->json(['error' => 'User not found'], 404);
         [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
-
         return $this->successResponse("Here's your $actor profile", [
             $actor => $actorResource
         ]);
@@ -562,7 +481,6 @@ class AuthController extends Controller
      *     @OA\Response(response=500, description="Internal server error")
      * )
      */
-
 
     public function logout()
     {
@@ -675,11 +593,10 @@ class AuthController extends Controller
         );
     }
 
-    public function destroyImage()
+    public function destroyImage($public_id)
     {
         $public_id = '';
         (new UploadApi())->destroy($public_id);
-
         return $this->successResponse("Deleted successfully!", "");
     }
 }
