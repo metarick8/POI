@@ -1,16 +1,16 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Your API Title",
-        "description": "Your API Description",
+        "title": "POI End-points",
+        "description": "POI project, my first project using Swagger, End-points not finished yet",
         "contact": {
-            "email": "your-email@example.com"
+            "email": "jadalhalabi88@gmail.com"
         },
         "license": {
             "name": "Apache 2.0",
             "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
         },
-        "version": "1.0.0"
+        "version": "1.0.1"
     },
     "paths": {
         "/api/register/user": {
@@ -22,18 +22,17 @@
                 "description": "Add new mobile user to the application",
                 "operationId": "878228d90ce6296c71ee74e3a4c84132",
                 "requestBody": {
-                    "description": "User register credentials",
+                    "description": "User registration credentials",
                     "required": true,
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
                                 "required": [
                                     "first_name",
                                     "last_name",
                                     "email",
                                     "password",
-                                    "password_confirmation",
-                                    "profile_picture"
+                                    "password_confirmation"
                                 ],
                                 "properties": {
                                     "first_name": {
@@ -46,7 +45,8 @@
                                     },
                                     "email": {
                                         "type": "string",
-                                        "example": "jad@email.com"
+                                        "format": "email",
+                                        "example": "jadalhalabi88@gmail.com"
                                     },
                                     "password": {
                                         "type": "string",
@@ -56,10 +56,16 @@
                                         "type": "string",
                                         "example": "12345678"
                                     },
-                                    "profile_picture": {
-                                        "description": "Profile picture file upload",
+                                    "profile_picture_url": {
+                                        "description": "Obtain this URL from `/api/upload/image`.",
                                         "type": "string",
-                                        "format": "binary"
+                                        "format": "url",
+                                        "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/user/example.jpg"
+                                    },
+                                    "public_id": {
+                                        "description": "Required only if profile_picture_url is provided.",
+                                        "type": "string",
+                                        "example": "Profile picture/user/example"
                                     }
                                 },
                                 "type": "object"
@@ -69,13 +75,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "User has been created!"
+                        "description": "User added to database",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User has been created!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Bad request"
                     },
                     "401": {
-                        "description": "Invalid credientials"
+                        "description": "Invalid credentials"
                     },
                     "422": {
                         "description": "Unprocessable Content"
@@ -92,30 +129,30 @@
                 "description": "Add new coach to the application",
                 "operationId": "2787183a78b186144d732e919faf0a99",
                 "requestBody": {
-                    "description": "Coach register credentials",
+                    "description": "Coach registration credentials",
                     "required": true,
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
                                 "required": [
                                     "first_name",
                                     "last_name",
                                     "email",
                                     "password",
-                                    "password_confirmation",
-                                    "profile_picture"
+                                    "password_confirmation"
                                 ],
                                 "properties": {
                                     "first_name": {
                                         "type": "string",
-                                        "example": "Coach first name"
+                                        "example": "Coach"
                                     },
                                     "last_name": {
                                         "type": "string",
-                                        "example": "Coach last name"
+                                        "example": "cc"
                                     },
                                     "email": {
                                         "type": "string",
+                                        "format": "email",
                                         "example": "coach@email.com"
                                     },
                                     "password": {
@@ -126,10 +163,16 @@
                                         "type": "string",
                                         "example": "12345678"
                                     },
-                                    "profile_picture": {
-                                        "description": "Profile picture file upload",
+                                    "profile_picture_url": {
+                                        "description": "Obtain this URL from `/api/upload/image`.",
                                         "type": "string",
-                                        "format": "binary"
+                                        "format": "url",
+                                        "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/coach/example.jpg"
+                                    },
+                                    "public_id": {
+                                        "description": "Required only if profile_picture_url is provided.",
+                                        "type": "string",
+                                        "example": "Profile picture/coach/example"
                                     }
                                 },
                                 "type": "object"
@@ -139,13 +182,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "User has been created!"
+                        "description": "Coach added to database",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Coach has been created!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Bad request"
                     },
                     "401": {
-                        "description": "Invalid credientials"
+                        "description": "Invalid credentials"
                     },
                     "422": {
                         "description": "Unprocessable Content"
@@ -162,10 +236,10 @@
                 "description": "Add new  debater to the application",
                 "operationId": "3043e2ceb79a236ddb1d0372adc7ab8e",
                 "requestBody": {
-                    "description": "Debater register credentials",
+                    "description": "Debater registration credentials",
                     "required": true,
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
                                 "required": [
                                     "first_name",
@@ -173,26 +247,23 @@
                                     "email",
                                     "password",
                                     "password_confirmation",
-                                    "profile_picture"
+                                    "coach_id"
                                 ],
                                 "properties": {
                                     "first_name": {
                                         "type": "string",
-                                        "example": "Debater first name"
+                                        "example": "Debater"
                                     },
                                     "last_name": {
                                         "type": "string",
-                                        "example": "Debater last name"
+                                        "example": "dd"
                                     },
                                     "email": {
                                         "type": "string",
+                                        "format": "email",
                                         "example": "debater@email.com"
                                     },
                                     "password": {
-                                        "type": "string",
-                                        "example": "12345678"
-                                    },
-                                    "password_confirmation": {
                                         "type": "string",
                                         "example": "12345678"
                                     },
@@ -201,10 +272,20 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "profile_picture": {
-                                        "description": "Profile picture file upload",
+                                    "password_confirmation": {
                                         "type": "string",
-                                        "format": "binary"
+                                        "example": "12345678"
+                                    },
+                                    "profile_picture_url": {
+                                        "description": "Obtain this URL from `/api/upload/image`.",
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/debater/example.jpg"
+                                    },
+                                    "public_id": {
+                                        "description": "Required only if profile_picture_url is provided.",
+                                        "type": "string",
+                                        "example": "Profile picture/debater/example"
                                     }
                                 },
                                 "type": "object"
@@ -214,13 +295,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Coach has been created!"
+                        "description": "Debater added to database",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Debater has been created!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Bad request"
                     },
                     "401": {
-                        "description": "Invalid credientials"
+                        "description": "Invalid credentials"
                     },
                     "422": {
                         "description": "Unprocessable Content"
@@ -237,30 +349,30 @@
                 "description": "Add new judge to the application",
                 "operationId": "14fec7cca552ae5c460732a11520bf0e",
                 "requestBody": {
-                    "description": "Judge register credentials",
+                    "description": "Judge registration credentials",
                     "required": true,
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
                                 "required": [
                                     "first_name",
                                     "last_name",
                                     "email",
                                     "password",
-                                    "password_confirmation",
-                                    "profile_picture"
+                                    "password_confirmation"
                                 ],
                                 "properties": {
                                     "first_name": {
                                         "type": "string",
-                                        "example": "Judge first name"
+                                        "example": "Judge"
                                     },
                                     "last_name": {
                                         "type": "string",
-                                        "example": "Judge last name"
+                                        "example": "jj"
                                     },
                                     "email": {
                                         "type": "string",
+                                        "format": "email",
                                         "example": "judge@email.com"
                                     },
                                     "password": {
@@ -271,10 +383,16 @@
                                         "type": "string",
                                         "example": "12345678"
                                     },
-                                    "profile_picture": {
-                                        "description": "Profile picture file upload",
+                                    "profile_picture_url": {
+                                        "description": "Obtain this URL from `/api/upload/image`.",
                                         "type": "string",
-                                        "format": "binary"
+                                        "format": "url",
+                                        "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/judge/example.jpg"
+                                    },
+                                    "public_id": {
+                                        "description": "Required only if profile_picture_url is provided.",
+                                        "type": "string",
+                                        "example": "Profile picture/judge/example"
                                     }
                                 },
                                 "type": "object"
@@ -284,13 +402,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Judge has been created!"
+                        "description": "Judge added to database",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Judge has been created!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Bad request"
                     },
                     "401": {
-                        "description": "Invalid credientials"
+                        "description": "Invalid credentials"
                     },
                     "422": {
                         "description": "Unprocessable Content"
@@ -332,7 +481,43 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Login successful"
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "LoggedIn successfully!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                                                },
+                                                "guard": {
+                                                    "description": "for front-end to know which widget should be directed",
+                                                    "type": "string",
+                                                    "example": "user"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Invalid credentials"
@@ -380,9 +565,9 @@
                                                     "type": "string",
                                                     "example": "jadalhalabi88@gmail.com"
                                                 },
-                                                "profile_picture": {
+                                                "profile_picture_url": {
                                                     "type": "string",
-                                                    "example": "random link"
+                                                    "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/user/example.jpg"
                                                 }
                                             },
                                             "type": "object"
@@ -413,6 +598,10 @@
                                                     "type": "string",
                                                     "example": "coach@email.com"
                                                 },
+                                                "profile_picture_url": {
+                                                    "type": "string",
+                                                    "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/coach/example.jpg"
+                                                },
                                                 "team": {
                                                     "type": "array",
                                                     "items": {
@@ -429,9 +618,9 @@
                                                                 "type": "string",
                                                                 "example": "debater@email.com"
                                                             },
-                                                            "profile_picture": {
+                                                            "profile_picture_url": {
                                                                 "type": "string",
-                                                                "example": "random link"
+                                                                "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/debater/example.jpg"
                                                             }
                                                         },
                                                         "type": "object"
@@ -466,9 +655,9 @@
                                                     "type": "string",
                                                     "example": "debater@email.com"
                                                 },
-                                                "profile_picture": {
+                                                "profile_picture_url": {
                                                     "type": "string",
-                                                    "example": "random link"
+                                                    "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/debater/example.jpg"
                                                 },
                                                 "coach_name": {
                                                     "type": "string",
@@ -478,6 +667,22 @@
                                             "type": "object"
                                         }
                                     ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Invalid token"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -494,6 +699,159 @@
                         "BearerAuth": []
                     }
                 ]
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout user",
+                "description": "Logs out the authenticated user and invalidates the JWT token.",
+                "operationId": "fe8f3429cd6979b3b4517e186505f9f9",
+                "responses": {
+                    "200": {
+                        "description": "Token is invalid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Successfully logged out"
+                                        },
+                                        "data": {
+                                            "type": "string",
+                                            "example": ""
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing token"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/upload/image": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Upload profile picture",
+                "description": "Upload the image to cloud storage and get the url (with public id) from response to apply it to the registration credentials",
+                "operationId": "4d37d826685852a6c5a4c74f87b70340",
+                "requestBody": {
+                    "description": "Upload image credentials",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "profile_picture",
+                                    "actor"
+                                ],
+                                "properties": {
+                                    "profile_picture": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "actor": {
+                                        "description": "Role type (Must be 'user', 'debater', 'coach' or 'judge')",
+                                        "type": "string",
+                                        "enum": [
+                                            "user",
+                                            "debater",
+                                            "coach",
+                                            "judge"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Image upload successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Uploaded Profile picture successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "url": {
+                                                    "type": "string",
+                                                    "format": "url",
+                                                    "example": "https://res.cloudinary.com/dts4tnvo4/image/upload/v1745489184/Profile%20picture/user/iiabghd42424ezj4b50s.jpg"
+                                                },
+                                                "public_id": {
+                                                    "type": "string",
+                                                    "example": "Profile picture/user/iiabghd42424ezj4b50s"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "errors": {
+                                            "type": "string",
+                                            "example": null,
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Invalid token"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized access"
+                    }
+                }
             }
         }
     },

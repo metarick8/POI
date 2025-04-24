@@ -12,8 +12,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
     Route::get('profile', 'profile');
+    Route::post('upload/image', 'uploadImage');
+    Route::delete('destroy/image', 'destroyImage');
 });
-    Route::post('/documentation')->withoutMiddleware('');
-    // Route::post('/register', function (Request $request) {
-    //     return response()->json(['message' => 'Test successful']);
-    // });
+Route::post('/documentation')->withoutMiddleware('');

@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('first_name');
             $table->string('last_name');
-            $table->string("profile_picture");
+            $table->string("profile_picture_url")->nullable();
+            $table->string("pp_public_id")->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');

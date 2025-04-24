@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 /**
  * @OA\Info(
- *      version="1.0.0",
- *      title="Your API Title",
- *      description="Your API Description",
+ *      version="1.0.1",
+ *      title="POI End-points",
+ *      description="POI project, my first project using Swagger, End-points not finished yet",
  *      @OA\Contact(
- *          email="your-email@example.com"
+ *          email="jadalhalabi88@gmail.com"
  *      ),
  *      @OA\License(
  *          name="Apache 2.0",
@@ -19,5 +19,5 @@ namespace App\Http\Controllers;
 
 abstract class Controller
 {
-    //
+    
 }

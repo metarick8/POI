@@ -12,8 +12,7 @@ class JudgeRegisterRequest extends UserRegisterRequest
 
     public function rules(): array
     {
-        return array_merge(parent::rules(), [
-            'user_id' => 'required|integer|exists:users,id',
-        ]);
+        return array_merge(parent::rules());
+
     }
 }

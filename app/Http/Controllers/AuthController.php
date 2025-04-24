@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CoachRegisterRequest;
 use App\Http\Requests\DebaterRegisterRequest;
+use App\Http\Requests\FileUploadRequest;
+use App\Http\Requests\JudgeRegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UserRegisterRequest;
 use App\Http\Resources\CoachResource;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Cloudinary\Api\Upload\UploadApi;
 
 /**
  * @OA\SecurityScheme(
@@ -36,6 +39,7 @@ class AuthController extends Controller
 
     public function __construct()
     {
+
         //$this->middleware('auth:api', ['except' => ['login','register']]);
     }
 
@@ -45,11 +49,10 @@ class AuthController extends Controller
             'debater' => ['registerDebater', DebaterRegisterRequest::class],
             'user' => ['registerUser', UserRegisterRequest::class],
             'coach' => ['registerCoach', CoachRegisterRequest::class],
-            'judge' => ['registerJudge', CoachRegisterRequest::class],
+            'judge' => ['registerJudge', JudgeRegisterRequest::class],
         ];
 
         if (!array_key_exists($actor, $registerMethods)) {
-            // return $this->errorResponse('Invalid registration type', $actor, [], 404);
             return response()->json(['error' => 'Invalid registration type'], 404);
         }
 
@@ -67,45 +70,53 @@ class AuthController extends Controller
      *     summary="Add user",
      *     description="Add new mobile user to the application",
      *     @OA\RequestBody(
-     *          required=true,
-     *          description="User register credentials",
-     *          @OA\MediaType(
-     *              mediaType="multipart/form-data",
-     *              @OA\Schema(
-     *                  required={"first_name", "last_name", "email", "password", "password_confirmation", "profile_picture"},
-     *                   @OA\Property(property="first_name", type="string", example="Jad"),
-     *                   @OA\Property(property="last_name", type="string", example="Alhalabi"),
-     *                   @OA\Property(property="email", type="string", example="jad@email.com"),
-     *                   @OA\Property(property="password", type="string", example="12345678"),
-     *                   @OA\Property(property="password_confirmation", type="string", example="12345678"),
-     *                   @OA\Property(
-     *                      property="profile_picture",
-     *                       type="string",
-     *                      format="binary",
-     *                      description="Profile picture file upload"
-     *                  )
-     *              )
+     *         required=true,
+     *         description="User registration credentials",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"first_name", "last_name", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="first_name", type="string", example="Jad"),
+     *             @OA\Property(property="last_name", type="string", example="Alhalabi"),
+     *             @OA\Property(property="email", type="string", format="email", example="jadalhalabi88@gmail.com"),
+     *             @OA\Property(property="password", type="string", example="12345678"),
+     *             @OA\Property(property="password_confirmation", type="string", example="12345678"),
+     *             @OA\Property(property="profile_picture_url",
+     *                 type="string", format="url",
+     *                 example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/user/example.jpg",
+     *                 description="Obtain this URL from `/api/upload/image`."
+     *             ),
+     *             @OA\Property(
+     *                 property="public_id",
+     *                 type="string",
+     *                 example="Profile picture/user/example",
+     *                 description="Required only if profile_picture_url is provided."
+     *             )
      *         )
-     *      ),
-     *     @OA\Response(
+     *     ),
+     *     *     @OA\Response(
      *         response=201,
-     *         description="User has been created!"
+     *         description="User added to database",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User has been created!"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="token",
+     *                     type="string",
+     *                     example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+     *                 )
+     *             ),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
      *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Bad request"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Invalid credientials"
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Unprocessable Content"
-     *     )
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Invalid credentials"),
+     *     @OA\Response(response=422, description="Unprocessable Content")
      * )
      */
-
 
     public function registerUser(UserRegisterRequest $request)
     {
@@ -114,7 +125,8 @@ class AuthController extends Controller
             'last_name' => $request->get('last_name'),
             'email' => $request->get('email'),
             'password' => Hash::make($request->get('password')),
-            'profile_picture' => "test"
+            'profile_picture_url' => $request->get('profile_picture_url'),
+            'pp_public_id' => $request->get('public_id'),
         ]);
 
         $token = Auth::guard('user')->login($user);
@@ -130,42 +142,51 @@ class AuthController extends Controller
      *     summary="Add coach",
      *     description="Add new coach to the application",
      *     @OA\RequestBody(
-     *          required=true,
-     *          description="Coach register credentials",
-     *          @OA\MediaType(
-     *              mediaType="multipart/form-data",
-     *              @OA\Schema(
-     *                  required={"first_name", "last_name", "email", "password", "password_confirmation", "profile_picture"},
-     *                   @OA\Property(property="first_name", type="string", example="Coach first name"),
-     *                   @OA\Property(property="last_name", type="string", example="Coach last name"),
-     *                   @OA\Property(property="email", type="string", example="coach@email.com"),
-     *                   @OA\Property(property="password", type="string", example="12345678"),
-     *                   @OA\Property(property="password_confirmation", type="string", example="12345678"),
-     *                   @OA\Property(
-     *                      property="profile_picture",
-     *                       type="string",
-     *                      format="binary",
-     *                      description="Profile picture file upload"
-     *                  )
-     *              )
+     *         required=true,
+     *         description="Coach registration credentials",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"first_name", "last_name", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="first_name", type="string", example="Coach"),
+     *             @OA\Property(property="last_name", type="string", example="cc"),
+     *             @OA\Property(property="email", type="string", format="email", example="coach@email.com"),
+     *             @OA\Property(property="password", type="string", example="12345678"),
+     *             @OA\Property(property="password_confirmation", type="string", example="12345678"),
+     *             @OA\Property(property="profile_picture_url",
+     *                 type="string", format="url",
+     *                 example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/coach/example.jpg",
+     *                 description="Obtain this URL from `/api/upload/image`."
+     *             ),
+     *             @OA\Property(
+     *                 property="public_id",
+     *                 type="string",
+     *                 example="Profile picture/coach/example",
+     *                 description="Required only if profile_picture_url is provided."
+     *             )
      *         )
-     *      ),
-     *      @OA\Response(
-     *          response=201,
-     *          description="User has been created!"
-     *      ),
-     *      @OA\Response(
-     *          response=400,
-     *          description="Bad request"
-     *      ),
-     *      @OA\Response(
-     *          response=401,
-     *          description="Invalid credientials"
      *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Unprocessable Content"
-     *     )
+     *     *     @OA\Response(
+     *         response=201,
+     *         description="Coach added to database",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Coach has been created!"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="token",
+     *                     type="string",
+     *                     example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+     *                 )
+     *             ),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Invalid credentials"),
+     *     @OA\Response(response=422, description="Unprocessable Content")
      * )
      */
 
@@ -177,10 +198,11 @@ class AuthController extends Controller
                 'last_name' => $request->get('last_name'),
                 'email' => $request->get('email'),
                 'password' => Hash::make($request->get('password')),
-                'profile_picture' => "test"
+                'profile_picture_url' => $request->get('profile_picture_url'),
+                'pp_public_id' => $request->get('public_id'),
             ]);
 
-            $coach = Coach::create([
+            Coach::create([
                 'user_id' => $request->get('user_id')
             ]);
 
@@ -200,44 +222,53 @@ class AuthController extends Controller
      *     tags={"Authentication"},
      *     summary="Add debater",
      *     description="Add new  debater to the application",
-     *     @OA\RequestBody(
-     *          required=true,
-     *          description="Debater register credentials",
-     *          @OA\MediaType(
-     *              mediaType="multipart/form-data",
-     *              @OA\Schema(
-     *                  required={"first_name", "last_name", "email", "password", "password_confirmation", "profile_picture"},
-     *                   @OA\Property(property="first_name", type="string", example="Debater first name"),
-     *                   @OA\Property(property="last_name", type="string", example="Debater last name"),
-     *                   @OA\Property(property="email", type="string", example="debater@email.com"),
-     *                   @OA\Property(property="password", type="string", example="12345678"),
-     *                   @OA\Property(property="password_confirmation", type="string", example="12345678"),
-     *                   @OA\Property(property="coach_id", type="integer", description="current coach id", example= 1),
-     *                   @OA\Property(
-     *                      property="profile_picture",
-     *                       type="string",
-     *                      format="binary",
-     *                      description="Profile picture file upload"
-     *                  )
-     *              )
+     *     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Debater registration credentials",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"first_name", "last_name", "email", "password", "password_confirmation", "coach_id"},
+     *             @OA\Property(property="first_name", type="string", example="Debater"),
+     *             @OA\Property(property="last_name", type="string", example="dd"),
+     *             @OA\Property(property="email", type="string", format="email", example="debater@email.com"),
+     *             @OA\Property(property="password", type="string", example="12345678"),
+     *             @OA\Property(property="coach_id", type="integer", description="current coach id", example= 1),
+     *             @OA\Property(property="password_confirmation", type="string", example="12345678"),
+     *             @OA\Property(property="profile_picture_url",
+     *                 type="string", format="url",
+     *                 example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/debater/example.jpg",
+     *                 description="Obtain this URL from `/api/upload/image`."
+     *             ),
+     *             @OA\Property(
+     *                 property="public_id",
+     *                 type="string",
+     *                 example="Profile picture/debater/example",
+     *                 description="Required only if profile_picture_url is provided."
+     *             )
      *         )
-     *      ),
-     *     @OA\Response(
+     *     ),
+     *     *     @OA\Response(
      *         response=201,
-     *         description="Coach has been created!"
+     *         description="Debater added to database",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Debater has been created!"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="token",
+     *                     type="string",
+     *                     example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+     *                 )
+     *             ),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
      *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Bad request"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Invalid credientials"
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Unprocessable Content"
-     *     )
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Invalid credentials"),
+     *     @OA\Response(response=422, description="Unprocessable Content")
      * )
      */
 
@@ -249,10 +280,11 @@ class AuthController extends Controller
                 'last_name' => $request->get('last_name'),
                 'email' => $request->get('email'),
                 'password' => Hash::make($request->get('password')),
-                'profile_picture' => "test"
+                'profile_picture_url' => $request->get('profile_picture_url'),
+                'pp_public_id' => $request->get('public_id'),
             ]);
 
-            $debater = Debater::create([
+            Debater::create([
                 'user_id' => $user->id,
                 'coach_id' => $request->get('coach_id'),
             ]);
@@ -274,46 +306,55 @@ class AuthController extends Controller
      *     summary="Add judge",
      *     description="Add new judge to the application",
      *     @OA\RequestBody(
-     *          required=true,
-     *          description="Judge register credentials",
-     *          @OA\MediaType(
-     *              mediaType="multipart/form-data",
-     *              @OA\Schema(
-     *                  required={"first_name", "last_name", "email", "password", "password_confirmation", "profile_picture"},
-     *                   @OA\Property(property="first_name", type="string", example="Judge first name"),
-     *                   @OA\Property(property="last_name", type="string", example="Judge last name"),
-     *                   @OA\Property(property="email", type="string", example="judge@email.com"),
-     *                   @OA\Property(property="password", type="string", example="12345678"),
-     *                   @OA\Property(property="password_confirmation", type="string", example="12345678"),
-     *                   @OA\Property(
-     *                      property="profile_picture",
-     *                       type="string",
-     *                      format="binary",
-     *                      description="Profile picture file upload"
-     *                  )
-     *              )
+     *         required=true,
+     *         description="Judge registration credentials",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"first_name", "last_name", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="first_name", type="string", example="Judge"),
+     *             @OA\Property(property="last_name", type="string", example="jj"),
+     *             @OA\Property(property="email", type="string", format="email", example="judge@email.com"),
+     *             @OA\Property(property="password", type="string", example="12345678"),
+     *             @OA\Property(property="password_confirmation", type="string", example="12345678"),
+     *             @OA\Property(property="profile_picture_url",
+     *                 type="string", format="url",
+     *                 example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/judge/example.jpg",
+     *                 description="Obtain this URL from `/api/upload/image`."
+     *             ),
+     *             @OA\Property(
+     *                 property="public_id",
+     *                 type="string",
+     *                 example="Profile picture/judge/example",
+     *                 description="Required only if profile_picture_url is provided."
+     *             )
      *         )
-     *      ),
-     *      @OA\Response(
-     *          response=201,
-     *          description="Judge has been created!"
-     *      ),
-     *      @OA\Response(
-     *          response=400,
-     *          description="Bad request"
-     *      ),
-     *      @OA\Response(
-     *          response=401,
-     *          description="Invalid credientials"
      *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Unprocessable Content"
-     *     )
+     *     *     @OA\Response(
+     *         response=201,
+     *         description="Judge added to database",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Judge has been created!"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="token",
+     *                     type="string",
+     *                     example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+     *                 )
+     *             ),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Invalid credentials"),
+     *     @OA\Response(response=422, description="Unprocessable Content")
      * )
      */
 
-    public function registerJudge(CoachRegisterRequest $request)
+    public function registerJudge(JudgeRegisterRequest $request)
     {
         try {
             $user = User::create([
@@ -321,10 +362,11 @@ class AuthController extends Controller
                 'last_name' => $request->get('last_name'),
                 'email' => $request->get('email'),
                 'password' => Hash::make($request->get('password')),
-                'profile_picture' => "test"
+                'profile_picture_url' => $request->get('profile_picture_url'),
+                'pp_public_id' => $request->get('public_id'),
             ]);
 
-            $judge = Judge::create([
+            Judge::create([
                 'user_id' => $user->id,
             ]);
 
@@ -352,7 +394,31 @@ class AuthController extends Controller
      *             @OA\Property(property="password", type="string", example="12345678")
      *         )
      * ),
-     * @OA\Response(response="200", description="Login successful"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Login successful",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="LoggedIn successfully!"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="token",
+     *                     type="string",
+     *                     example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+     *                 ),
+     *                 @OA\Property(
+     *                     property="guard",
+     *                     type="string",
+     *                     example="user",
+     *                     description="for front-end to know which widget should be directed"
+     *                 )
+     *             ),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
+     *     ),
      * @OA\Response(response="401", description="Invalid credentials")
      * )
      */
@@ -384,7 +450,6 @@ class AuthController extends Controller
             return response()->json(['error' => 'Could not create token'], 500);
         }
     }
-
     /**
      * @OA\Get(
      *     path="/api/profile",
@@ -404,7 +469,7 @@ class AuthController extends Controller
      *                     @OA\Property(property="first_name", type="string", example="Jad"),
      *                     @OA\Property(property="last_name", type="string", example="Alhalabi"),
      *                     @OA\Property(property="email", type="string", example="jadalhalabi88@gmail.com"),
-     *                     @OA\Property(property="profile_picture", type="string", example="random link")
+     *                     @OA\Property(property="profile_picture_url", type="string", example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/user/example.jpg")
      *                 ),
      *                 @OA\Schema(
      *                     schema="Coach",
@@ -413,6 +478,7 @@ class AuthController extends Controller
      *                     @OA\Property(property="first_name", type="string", example="Coach Name"),
      *                     @OA\Property(property="last_name", type="string", example="Last Name"),
      *                     @OA\Property(property="email", type="string", example="coach@email.com"),
+     *                     @OA\Property(property="profile_picture_url", type="string", example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/coach/example.jpg"),
      *                     @OA\Property(
      *                         property="team",
      *                         type="array",
@@ -421,7 +487,7 @@ class AuthController extends Controller
      *                             @OA\Property(property="first_name", type="string", example="Debater first name"),
      *                             @OA\Property(property="last_name", type="string", example="Debater last name"),
      *                             @OA\Property(property="email", type="string", example="debater@email.com"),
-     *                             @OA\Property(property="profile_picture", type="string", example="random link"),
+     *                             @OA\Property(property="profile_picture_url", type="string", example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/debater/example.jpg")
      *                         )
      *                     )
      *                 ),
@@ -432,10 +498,18 @@ class AuthController extends Controller
      *                     @OA\Property(property="first_name", type="string", example="Debater Name"),
      *                     @OA\Property(property="last_name", type="string", example="Last Name"),
      *                     @OA\Property(property="email", type="string", example="debater@email.com"),
-     *                     @OA\Property(property="profile_picture", type="string", example="random link"),
-     *                     @OA\Property(property="coach_name", type="string", example="Coach first name + Coach last name"),
+     *                     @OA\Property(property="profile_picture_url", type="string", example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745503749/Profile%20picture/debater/example.jpg"),
+     *                     @OA\Property(property="coach_name", type="string", example="Coach first name + Coach last name")
      *                 )
      *             }
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bad Request - Invalid token",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string", example="Invalid token")
      *         )
      *     ),
      *     @OA\Response(
@@ -448,7 +522,6 @@ class AuthController extends Controller
      *     )
      * )
      */
-
 
     public function profile()
     {
@@ -466,6 +539,30 @@ class AuthController extends Controller
             $actor => $actorResource
         ]);
     }
+
+    /**
+     * @OA\Post(
+     *     path="/api/logout",
+     *     summary="Logout user",
+     *     description="Logs out the authenticated user and invalidates the JWT token.",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Token is invalid",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Successfully logged out"),
+     *             @OA\Property(property="data", type="string", example=""),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized - Invalid or missing token"),
+     *     @OA\Response(response=500, description="Internal server error")
+     * )
+     */
+
 
     public function logout()
     {
@@ -496,5 +593,93 @@ class AuthController extends Controller
         };
 
         return [$guard, new $resourceClass($actor)];
+    }
+
+
+    /**
+     * @OA\Post(
+     *     path="/api/upload/image",
+     *     summary="Upload profile picture",
+     *     description="Upload the image to cloud storage and get the url (with public id) from response to apply it to the registration credentials",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *          required=true,
+     *          description="Upload image credentials",
+     *           @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"profile_picture", "actor"},
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="profile_picture",
+     *                     type="string",
+     *                     format="binary"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="actor",
+     *                      description="Role type (Must be 'user', 'debater', 'coach' or 'judge')",
+     *                     type="string",
+     *                     enum={"user", "debater", "coach", "judge"}
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *    @OA\Response(
+     *         response=200,
+     *         description="Image upload successful",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Uploaded Profile picture successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="url", type="string", format="url", example="https://res.cloudinary.com/dts4tnvo4/image/upload/v1745489184/Profile%20picture/user/iiabghd42424ezj4b50s.jpg"),
+     *                 @OA\Property(property="public_id", type="string", example="Profile picture/user/iiabghd42424ezj4b50s")
+     *             ),
+     *             @OA\Property(property="errors", type="string", nullable=true, example=null)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bad Request - Invalid token",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="error", type="string", example="Invalid token")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized access")
+     * )
+     */
+
+    public function uploadImage(FileUploadRequest $request)
+    {
+
+        $uploadedimage = $request->file('profile_picture');
+
+        $imagePath = $uploadedimage->getRealPath();
+        $actor = $request->get('actor');
+
+        $cloudinary = new UploadApi();
+        $image = $cloudinary->upload($imagePath, [
+            'folder' =>  "Profile picture/$actor",
+
+        ]);
+
+        return $this->successResponse(
+            "Uploaded Profile pciture successfully",
+            [
+                'url' => $image['secure_url'],
+                'public_id' => $image['public_id'],
+            ]
+        );
+    }
+
+    public function destroyImage()
+    {
+        $public_id = '';
+        (new UploadApi())->destroy($public_id);
+
+        return $this->successResponse("Deleted successfully!", "");
     }
 }

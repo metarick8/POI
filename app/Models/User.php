@@ -18,7 +18,8 @@ class User extends Authenticatable implements JWTSubject
     protected $fillable = [
         'first_name',
         'last_name',
-        'profile_picture',
+        'profile_picture_url',
+        'pp_public_id',
         'email',
         'password'
     ];
