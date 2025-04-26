@@ -12,7 +12,7 @@ class DebaterRegisterRequest extends UserRegisterRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'coach_id' => ['required', 'integer', 'exists:coaches,id'],
+            'coach_id' => ['required', 'integer', 'exists:coaches,id']
         ]);
     }
 }

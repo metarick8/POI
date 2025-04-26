@@ -20,7 +20,6 @@ use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 use Cloudinary\Api\Upload\UploadApi;
 
 /**
@@ -369,7 +368,6 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
 
         $token = Auth::guard($actor)->login($user);
-
         return $this->successResponse("LoggedIn successfully !", [
             "token" => $token,
             "guard" => $actor,

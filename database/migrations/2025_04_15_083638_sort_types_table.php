@@ -6,23 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('resolution_sorts', function (Blueprint $table) {
+        Schema::create('sort_types', function (Blueprint $table) {
             $table->id();
-            $table->string("sort"); // Needs searching for ENUM then editing enum
+            $table->string('name');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('resolution_sorts');
+        Schema::dropIfExists('sort_types');
     }
 };

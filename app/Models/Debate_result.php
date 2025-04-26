@@ -8,7 +8,7 @@ class Debate_result extends Model
 {
     protected $fillable = [
         'debate_id',
-        'debater_role_id',
+        'role_id',
         'rank',
     ];
 
@@ -17,8 +17,8 @@ class Debate_result extends Model
         return $this->belongsTo(Debate::class, 'debate_id', 'id');
     }
 
-    public function debate_role()
+    public function role()
     {
-        return $this->belongsTo(Debater_role::class, 'debater_role_id', 'id');
+        return $this->belongsTo(Role::class, 'role_id', 'id');
     }
 }

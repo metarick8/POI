@@ -7,16 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Resolution extends Model
 {
     protected $fillable = [
-        'sort_id',
-        'sentence',
+        'sentence'
     ];
 
-    public function sort()
+    public function sorts()
     {
-        return $this->belongsTo(Resolution_sort::class, 'sort_id', 'id');
+        return $this->belongsToMany(Sort::class, 'resolution_sorts', 'resolution_id', 'sort_id');
     }
 
-    public function debates ()
+    public function debates()
     {
         return $this->hasMany(Debate::class, 'resolution_id', 'id');
     }

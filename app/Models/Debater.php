@@ -40,7 +40,7 @@ class   Debater extends Authenticatable implements JWTSubject
     public function participants()
     {
         return $this->belongsToMany(Debater::class, 'participants_debaters', 'debater_id', 'debate_id')
-                    ->withPivot('debater_role_id')
+                    ->withPivot('role_id')
                     ->using(Participants_debater::class);
     }
 

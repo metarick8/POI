@@ -39,7 +39,6 @@ class User extends Authenticatable implements JWTSubject
         'remember_token',
     ];
 
-
     protected function casts(): array
     {
         return [

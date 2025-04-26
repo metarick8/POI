@@ -8,17 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('feedback', function (Blueprint $table) {
+        Schema::create('sorts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger("participant_debater_id");
-            $table->string("note");
-            $table->foreign("participant_debater_id")->references("id")->on("participants_debaters")->onDelete("cascade");
+            $table->string('name');
+            $table->unsignedBigInteger('sort_type_id');
+            $table->foreign('sort_type_id')->references('id')->on('sort_types')->onDelete('cascade');
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('feedback');
+        Schema::dropIfExists('sorts');
     }
 };

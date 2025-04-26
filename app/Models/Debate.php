@@ -16,7 +16,7 @@ class Debate extends Model
     public function debaters()
     {
         return $this->belongsToMany(Debater::class, 'participants_debaters', 'debate_id', 'debater_id')
-                    ->withPivot('debater_role_id')
+                    ->withPivot('role_id')
                     ->using(Participants_debater::class);
     }
 
@@ -24,7 +24,7 @@ class Debate extends Model
     public function debatersWithRole($roleId)
     {
         return $this->debaters()
-                   ->wherePivot('debater_role_id', $roleId);
+                   ->wherePivot('role_id', $roleId);
     }
 
     public function results()

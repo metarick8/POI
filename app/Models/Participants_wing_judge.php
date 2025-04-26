@@ -8,13 +8,14 @@ class Participants_wing_judge extends Model
 {
     protected $fillable = [
         'debate_id',
-        'wing_judge_id',
+        'wing_judge_id'
     ];
 
     public function debate()
     {
         return $this->belongsTo(Debate::class, 'debate_id', 'id');
     }
+
 
     public function judge()
     {
