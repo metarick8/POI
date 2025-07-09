@@ -26,13 +26,13 @@ class Judge extends Authenticatable implements JWTSubject
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function wing_judges()
-    {
-        return $this->hasMany(Participants_wing_judge::class, 'wing_judge_id', 'id');
-    }
+    // public function panelist_judges()
+    // {
+    //     return $this->hasMany(Participants_panelist_judge::class, 'panelist_judge_id', 'id');
+    // }
 
     public function debates()
     {
-        return $this->hasMany(Debate::class, 'main_judge_id', 'id');
+        return $this->hasMany(Debate::class, 'chair_judge_id', 'id');
     }
 }

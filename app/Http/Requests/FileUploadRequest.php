@@ -2,29 +2,22 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\FileOwner;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class FileUploadRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
             'profile_picture' => ['required', 'image'],
-            'actor' => ['required', 'string', Rule::in(['user', 'coach', 'judge', 'debater'])],
+            'actor' => ['required', 'string', Rule::enum(FileOwner::class)],
         ];
     }
 }

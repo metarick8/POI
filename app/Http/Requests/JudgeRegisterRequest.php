@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 
-class JudgeRegisterRequest extends UserRegisterRequest
+class JudgeRegisterRequest extends UserProfileRequest
 {
     public function authorize(): bool
     {

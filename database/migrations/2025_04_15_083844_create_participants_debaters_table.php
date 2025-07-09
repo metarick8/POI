@@ -12,11 +12,11 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('debate_id');
             $table->unsignedBigInteger('debater_id');
-            $table->unsignedBigInteger('role_id');
+            $table->unsignedBigInteger('speaker_id');
             $table->smallInteger("rank");
             $table->foreign('debate_id')->references('id')->on('debates')->onDelete('cascade');
             $table->foreign('debater_id')->references('id')->on('debaters')->onDelete('cascade');
-            $table->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
+            $table->foreign('speaker_id')->references('id')->on('speakers')->onDelete('cascade');
             $table->timestamps();
         });
     }

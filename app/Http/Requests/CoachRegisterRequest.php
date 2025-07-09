@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 
-class CoachRegisterRequest extends UserRegisterRequest
+class CoachRegisterRequest extends UserProfileRequest
 {
     public function authorize(): bool
     {

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-class DebaterRegisterRequest extends UserRegisterRequest
+class DebaterRegisterRequest extends UserProfileRequest
 {
     public function authorize(): bool
     {
@@ -12,7 +12,8 @@ class DebaterRegisterRequest extends UserRegisterRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'coach_id' => ['required', 'integer', 'exists:coaches,id']
+            'coach_id' => ['integer', 'exists:coaches,id'],
+            'governorate' => ['required']
         ]);
     }
 }

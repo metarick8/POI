@@ -9,10 +9,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            ResolutionSortsSeeder::class,
-            ResolutionsSeeder::class,
-            SortsSeeder::class,
-            SortTypeSeeder::class,
+            ClassificationSeeder::class,
+            SubClassificationSeeder::class,
+            MotionsSeeder::class,
+            MotionSubClassificationSeeder::class,
+            ColorSeeder::class,
+            UniversitySeeder::class
         ]);
     }
 }

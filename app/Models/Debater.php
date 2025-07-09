@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class   Debater extends Authenticatable implements JWTSubject
+class Debater extends Authenticatable implements JWTSubject
 {
     protected $fillable = [
         'user_id',
@@ -37,11 +37,10 @@ class   Debater extends Authenticatable implements JWTSubject
         return $this->belongsToMany(Coach::class, 'coach_teams', 'debater_id', 'coach_id');
     }
 
-    public function participants()
-    {
-        return $this->belongsToMany(Debater::class, 'participants_debaters', 'debater_id', 'debate_id')
-                    ->withPivot('role_id')
-                    ->using(Participants_debater::class);
-    }
+    // public function participants()
+    // {
+    //     return $this->belongsToMany(Debate::class, 'participants_debaters', 'debater_id', 'debate_id')
+    //                 ->using(Participants_debater::class);
+    // }
 
 }

@@ -10,15 +10,19 @@ return new class extends Migration
     {
         Schema::create('debates', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('resolution_id');
-            $table->unsignedBigInteger('main_judge_id');
-            $table->date("start_date");
-            $table->foreign('resolution_id')->references('id')->on('resolutions')->onDelete('cascade');
-            $table->foreign('main_judge_id')->references('id')->on('judges')->onDelete('cascade');
+            $table->unsignedBigInteger('motion_id')->nullable();
+            $table->unsignedBigInteger('chair_judge_id')->nullable();
+            $table->date('start_date');
+            $table->time('start_time')->nullable();
+            $table->enum('type', ['onsite', 'online']);
+            $table->enum('status', ['announced', 'playersConfirmed', 'debatePreperation','ongoing', 'finished', 'cancelled', 'bugged']);
+            $table->string('filter')->nullable();
+            $table->foreign('motion_id')->references('id')->on('motions')->onDelete('cascade');
+            $table->foreign('chair_judge_id')->references('id')->on('judges')->onDelete('cascade');
             $table->timestamps();
         });
     }
-    
+
     public function down(): void
     {
         Schema::dropIfExists('debates');

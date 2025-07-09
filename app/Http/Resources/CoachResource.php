@@ -7,12 +7,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class CoachResource extends JsonResource
 {
-
     public function toArray(Request $request): array
     {
         return [
-            "profile" => new MobileUserResource($this->user),
-            "team" => "team",
+            'profile' => new MobileUserResource($this->user),
+            'team' => 'team',
         ];
 
     }

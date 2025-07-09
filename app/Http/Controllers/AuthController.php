@@ -7,7 +7,7 @@ use App\Http\Requests\DebaterRegisterRequest;
 use App\Http\Requests\FileUploadRequest;
 use App\Http\Requests\JudgeRegisterRequest;
 use App\Http\Requests\LoginRequest;
-use App\Http\Requests\UserRegisterRequest;
+use App\Http\Requests\UserProfileRequest;
 use App\Http\Resources\CoachResource;
 use App\Http\Resources\DebaterResource;
 use App\Http\Resources\JudgeResource;
@@ -21,6 +21,7 @@ use App\Services\AuthService;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Cloudinary\Api\Upload\UploadApi;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @OA\SecurityScheme(
@@ -48,7 +49,7 @@ class AuthController extends Controller
     {
         $registerMethods = [
             'debater' => ['registerDebater', DebaterRegisterRequest::class],
-            'user' => ['registerUser', UserRegisterRequest::class],
+            'user' => ['registerUser', UserProfileRequest::class],
             'coach' => ['registerCoach', CoachRegisterRequest::class],
             'judge' => ['registerJudge', JudgeRegisterRequest::class],
         ];
@@ -119,7 +120,7 @@ class AuthController extends Controller
      * )
      */
 
-    public function registerUser(UserRegisterRequest $request)
+    public function registerUser(UserProfileRequest $request)
     {
         if ($this->authService->createUser($request) != null)
             return $this->successResponse("User has been created!", '', 201);
@@ -246,9 +247,14 @@ class AuthController extends Controller
 
     public function registerDebater(DebaterRegisterRequest $request)
     {
-        if ($this->authService->createDebater($request) != null)
-            return $this->successResponse("Debater has been created!", '', 201);
-        return $this->errorResponse("Something went wrong!", '');
+        try {
+            Log::debug('Register Debater Request: ', $request->all());
+            $user = $this->authService->createDebater($request);
+            return $this->successResponse("Debater has been created!", new MobileUserResource($user), 201);
+        } catch (\Throwable $t) {
+            Log::error('Register Debater Error: ' . $t->getMessage());
+            return $this->errorResponse("Something went wrong!", $t->getMessage());
+        }
     }
 
     /**
@@ -308,11 +314,15 @@ class AuthController extends Controller
 
     public function registerJudge(JudgeRegisterRequest $request)
     {
-        if ($this->authService->createJudge($request) != null)
-            return $this->successResponse("Judge has been created!", '', 201);
-        return $this->errorResponse("Something went wrong!", '');
+        try {
+            Log::debug('Register Judge Request: ', $request->all());
+            $user = $this->authService->createJudge($request);
+            return $this->successResponse("Judge has been created!", new MobileUserResource($user), 201);
+        } catch (\Throwable $t) {
+            Log::error('Register Judge Error: ' . $t->getMessage());
+            return $this->errorResponse("Something went wrong!", $t->getMessage());
+        }
     }
-
     /**
      * @OA\Post(
      *     path="/api/login",
@@ -373,7 +383,6 @@ class AuthController extends Controller
             "guard" => $actor,
         ]);
     }
-
     /**
      * @OA\Get(
      *     path="/api/profile",
@@ -457,6 +466,13 @@ class AuthController extends Controller
         ]);
     }
 
+    public function editProfile(UserProfileRequest $request)
+    {
+        $updated = $this->authService->patch($request);
+        if ($updated)
+            return $this->successResponse('User profile updated successfully!', '');
+    }
+
     /**
      * @OA\Post(
      *     path="/api/logout",
@@ -487,7 +503,7 @@ class AuthController extends Controller
         return $this->successResponse("Successfully logged out", '');
     }
 
-    private function getAuthenticatedActor($userId)
+    public function getAuthenticatedActor($userId)
     {
         $actor = Coach::where('user_id', $userId)->first()
             ?? Judge::where('user_id', $userId)->first()
@@ -579,7 +595,6 @@ class AuthController extends Controller
         $cloudinary = new UploadApi();
         $image = $cloudinary->upload($imagePath, [
             'folder' =>  "Profile picture/$actor",
-
         ]);
 
         return $this->successResponse(

@@ -7,43 +7,60 @@ use Illuminate\Database\Eloquent\Model;
 class Debate extends Model
 {
     protected $fillable = [
-        'resolution_id',
-        'main_judge_id',
+        'motion_id',
+        'chair_judge_id',
         'start_date',
+        'start_time',
+        'type',
+        'status',
+        'filter',
+        'winner',
+        'summary',
+        'cancellation_reason',
     ];
 
+    protected $casts = [
+        'status' => 'string',
+        'type' => 'string',
+    ];
 
-    public function debaters()
+    public function motion()
     {
-        return $this->belongsToMany(Debater::class, 'participants_debaters', 'debate_id', 'debater_id')
-                    ->withPivot('role_id')
-                    ->using(Participants_debater::class);
+        return $this->belongsTo(Motion::class, 'motion_id');
     }
 
-    // To get debaters with a specific role
-    public function debatersWithRole($roleId)
+    public function chairJudge()
     {
-        return $this->debaters()
-                   ->wherePivot('role_id', $roleId);
+        return $this->belongsTo(Judge::class, 'chair_judge_id');
     }
 
-    public function results()
+    // public function panelistJudges()
+    // {
+    //     return $this->hasMany(PanelistJudge::class, 'debate_id');
+    // }
+
+    public function participantsDebaters()
     {
-        return $this->hasMany(Debate_result::class, 'debate_id', 'id');
+        return $this->hasMany(ParticipantsDebater::class, 'debate_id');
     }
 
-    public function resolution()
+    public function applications()
     {
-        return $this->belongsTo(Resolution::class, 'resolution_id', 'id');
+        return $this->hasMany(Application::class, 'debate_id');
     }
 
-    public function wing_judges()
+    public function getApplicantsCountAttribute()
     {
-        return $this->hasMany(Participants_wing_judge::class, 'debate_id', 'id');
+        return $this->applications()->count();
     }
 
-    public function main_judge()
+    public function getDebatersCountAttribute()
     {
-        return $this->belongsTo(Judge::class, 'main_judge_id', 'id');
+        return $this->participantsDebaters()->count();
+    }
+
+    public function getPanelistJudgesCountAttribute()
+    {
+        return $this->panelistJudges()->count();
     }
 }

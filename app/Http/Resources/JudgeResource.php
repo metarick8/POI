@@ -10,7 +10,8 @@ class JudgeResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            "profile" => new MobileUserResource($this->user),
+            'profile' => new MobileUserResource($this->user),
+            'debates' => 'games',
         ];
     }
 }

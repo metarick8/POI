@@ -11,7 +11,6 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     protected $guard = 'web';
@@ -19,9 +18,14 @@ class User extends Authenticatable implements JWTSubject
         'first_name',
         'last_name',
         'profile_picture_url',
-        'pp_public_id',
         'email',
-        'password'
+        'password',
+        'pp_public_id',
+        'faculty_id',
+        'governorate',
+        'mobile_number',
+        'education_degree',
+        'birth_date'
     ];
 
     public function getJWTIdentifier()
@@ -42,8 +46,8 @@ class User extends Authenticatable implements JWTSubject
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'birth_date' => 'date', // Cast birth_date to date
+            'education_degree' => 'string', // Cast education_degree to string (enum)
         ];
     }
 
@@ -52,7 +56,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(Debater::class, 'user_id', 'id');
     }
 
-    public function coach():HasOne
+    public function coach(): HasOne
     {
         return $this->hasOne(Coach::class, 'user_id', 'id');
     }
@@ -60,5 +64,17 @@ class User extends Authenticatable implements JWTSubject
     public function judge()
     {
         return $this->hasOne(Judge::class, 'user_id', 'id');
+    }
+
+    public function faculty()
+    {
+        return $this->belongsTo(Faculty::class, 'faculty_id', 'id');
+    }
+
+    public function applications()
+    {
+        return $this->belongsToMany(Debate::class, 'applications', 'user_id', 'debate_id')
+            ->withTimestamps()
+            ->using(Application::class);
     }
 }

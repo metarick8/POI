@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\DebateType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class DebateInitializeRequest extends FormRequest
 {
@@ -15,11 +17,15 @@ class DebateInitializeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'resolution_id' => ['required', 'integer', 'exists:resolutions, id'],
-            'main_judge_id' => ['required', 'integer', 'exists:judges, id'],
+            // 'motion_id' => ['required', 'integer', 'exists:motions,id'],
+            // 'chair_judge_id' => ['required', 'integer', 'exists:judges,id'],
             'date' => ['required', 'date', 'after:' . now()->addDays(3)->toDateString()],
-            'wing_judges' => ['array', 'size:1,2'],
-            'wing_judges.*' => ['integer', 'exists:judges,id']
+            'type' => ['required', 'string', Rule::enum(DebateType::class)],
+            'time' => ['required', 'date_format:H:i']
+            // 'panelist_judges' => ['array', 'min:1', 'max:2'],
+            // 'panelist_judges.*' => ['integer', 'exists:judges,id', 'distinct'],
+            // 'chair_judge_id' => ['different:panelist_judges.*']
+
         ];
     }
 }
