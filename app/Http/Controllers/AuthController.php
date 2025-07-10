@@ -462,7 +462,7 @@ class AuthController extends Controller
             return response()->json(['error' => 'User not found'], 404);
         [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
         return $this->successResponse("Here's your $actor profile", [
-            $actor => $actorResource
+            $actorResource
         ]);
     }
 

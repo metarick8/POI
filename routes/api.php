@@ -29,4 +29,7 @@ Route::patch('motion/update', [MotionController::class, 'update']);
 Route::delete('motion/delete/{motionId}', [MotionController::class, 'delete']);
 Route::get('debate/index', [DebateController::class, 'index']);
 Route::get('data/education', [FacultyController::class, 'index']);
+Route::get('this/test', function (){
+    return 'this is test';
+});
 
