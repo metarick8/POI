@@ -33,3 +33,6 @@ Route::get('this/test', function (){
     return 'this is test';
 });
 
+Route::post('this/post',function() {
+    return 'this is post';
+});
