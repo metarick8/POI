@@ -32,6 +32,7 @@ Route::get('data/education', [FacultyController::class, 'index']);
 Route::get('this/test', function (){
     return 'this is test';
 });
+Route::post('test', [AuthController::class, 'test']);
 
 Route::post('this/post',function() {
     return 'this is post';

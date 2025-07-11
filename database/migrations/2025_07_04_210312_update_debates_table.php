@@ -14,6 +14,8 @@ return new class extends Migration
             $table->index('motion_id');
             $table->index('chair_judge_id');
             $table->index('status');
+            $table->integer('judge_count')->default(0)->after('status');
+            $table->integer('debater_count')->default(0)->after('status');
         });
     }
 
@@ -24,6 +26,8 @@ return new class extends Migration
             $table->dropIndex(['motion_id']);
             $table->dropIndex(['chair_judge_id']);
             $table->dropIndex(['status']);
+            $table->dropIndex(['judge_count']);
+            $table->dropIndex(['debater_count']);
         });
     }
 };
