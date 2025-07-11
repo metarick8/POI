@@ -21,6 +21,7 @@ use App\Services\AuthService;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Cloudinary\Api\Upload\UploadApi;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -611,5 +612,10 @@ class AuthController extends Controller
         $public_id = '';
         (new UploadApi())->destroy($public_id);
         return $this->successResponse("Deleted successfully!", "");
+    }
+
+    public function test(Request $request)
+    {
+    return $this->successResponse("Test response", "Test");
     }
 }
