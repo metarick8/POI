@@ -26,7 +26,7 @@ class DebateService
                 //'chair_judge_id' => $request->get('chair_judge_id'),
                 'start_date' => $request->get('date'),
                 'type' => $request->get('type'),
-                'start_time' => $request->get('time'),
+                'start_time' => $request->get('time')
             ]);
             // if ($request->has('panelist_judges'))
             //     foreach ($request->get('panelist_judges') as $panelistJudgeId)
