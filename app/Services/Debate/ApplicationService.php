@@ -26,12 +26,12 @@ class ApplicationService
 
         return $debate->applications();
     }
-
+    //from Omar: isn't there a middleware for auth? rather than doing it in code?
     public function request(Debate $debate)
     {
         if (!$user = JWTAuth::parseToken()->authenticate())
             return $this->errorResponse('User not found!', '', ['User not found!'], 400);
-
+        //from Omar: as did in the api.php it's impossible to be null because it would return 404 before entering the method
         if ($debate->is_null)
             return $this->errorResponse('Debate not found!', '', [], 400);
         Application::create([
@@ -41,6 +41,8 @@ class ApplicationService
         ]);
     }
 
+
+    //from Omar: this code has problems (missing the type of the user whether judge or debater!)
     public function response(ResponseToDebateRequest $request)
     {
         $applicationId = $request->get('application_id');
@@ -90,6 +92,8 @@ class ApplicationService
         }
     }
 
+
+    //from Omar: this code has problems
     private function  applicationAvailabilty(int $applicationId, $debateId)
     {
 

@@ -14,7 +14,9 @@ class DatabaseSeeder extends Seeder
             MotionsSeeder::class,
             MotionSubClassificationSeeder::class,
             ColorSeeder::class,
-            UniversitySeeder::class
+            UniversitySeeder::class,
+            TeamSeeder::class,
+            SpeakerSeeder::class
         ]);
     }
 }

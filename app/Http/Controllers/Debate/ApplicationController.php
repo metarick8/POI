@@ -15,6 +15,7 @@ class ApplicationController extends Controller
     {
         $this->applicationService = $applicationService;
     }
+
     public function request(Debate $debate)
     {
         $this->applicationService->request($debate);

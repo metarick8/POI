@@ -19,7 +19,7 @@ class DebateInitializeRequest extends FormRequest
         return [
             // 'motion_id' => ['required', 'integer', 'exists:motions,id'],
             // 'chair_judge_id' => ['required', 'integer', 'exists:judges,id'],
-            'date' => ['required', 'date', 'after:' . now()->addDays(3)->toDateString()],
+            'date' => ['required', 'date', 'after:' . now()->addDays(-1)->toDateString()],
             'type' => ['required', 'string', Rule::enum(DebateType::class)],
             'time' => ['required', 'date_format:H:i']
             // 'panelist_judges' => ['array', 'min:1', 'max:2'],

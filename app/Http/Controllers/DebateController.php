@@ -10,6 +10,7 @@ use App\Models\Debate;
 use App\Models\Motion;
 use App\Services\DebateService;
 use Illuminate\Http\Request;
+
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class DebateController extends Controller
@@ -21,6 +22,7 @@ class DebateController extends Controller
         $this->debateService = $debateService;
     }
 
+    
     public function show(Debate $debate)
     {
         $debate->load([
@@ -102,5 +104,22 @@ class DebateController extends Controller
         }
 
         return $this->successResponse('Debate finished successfully!', new DebateResource($result));
+    }
+    public function toDebatePreparationStatus(Debate $debate) {
+        if($debate->status==='playersConfirmed')
+        {
+            $debate->update(['status'=>'debatePreperation']);
+            return $this->successResponse('Debate Status changed successfully!',$debate);
+        } else {
+            return $this->errorResponse("Current Debate Status isn't (playersConfirmed)",403);
+        }
+    }
+    public function index() {
+                try {
+            $debates = $this->debateService->index();
+            return $this->successResponse("Education data:",$debates, 200);
+        } catch (\Throwable $t) {
+            return $this->errorResponse("Something went wrong!", $t->getMessage());
+        }
     }
 }

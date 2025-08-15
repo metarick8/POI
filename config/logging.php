@@ -51,6 +51,12 @@ return [
     */
 
     'channels' => [
+        'mylog' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/webhook.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
 
         'stack' => [
             'driver' => 'stack',
