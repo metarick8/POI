@@ -2,12 +2,13 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoachController;
+use App\Http\Controllers\Debate\ApplicationController;
 use App\Http\Controllers\DebateController;
 use App\Http\Controllers\FacultyController;
 use App\Http\Controllers\MotionController;
 use App\Http\Controllers\SubClassificationController;
+use App\Http\Middleware\JwtMiddleware;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
 
 
 Route::controller(AuthController::class)->group(function () {
@@ -21,7 +22,7 @@ Route::controller(AuthController::class)->group(function () {
 });
 
 Route::post('documentation')->withoutMiddleware('');
-Route::post('debate/create', [DebateController::class, 'create']);
+
 Route::get('motion/classification', [SubClassificationController::class, 'index']);
 Route::get('motion/get', [MotionController::class, 'index']);
 Route::post('motion/create', [MotionController::class, 'create']);
@@ -32,5 +33,19 @@ Route::get('data/education', [FacultyController::class, 'index']);
 Route::get('this/test', function (){
     return 'this is test';
 });
+Route::get('debate/apply/{debateId}', [ApplicationController::class, 'apply']);
 Route::post('test', [AuthController::class, 'test']);
 
+
+Route::prefix('debates')->middleware(JwtMiddleware::class)->group(function () {
+    Route::get('/', [DebateController::class, 'index']);
+    Route::get('{debate}', [DebateController::class, 'show']);
+    Route::post('/', [DebateController::class, 'create'])->middleware('auth.admin');
+    Route::post('{debate}/apply-debater', [ApplicationController::class, 'applyDebater']);
+    Route::post('{debate}/apply-judge', [ApplicationController::class, 'applyJudge']);
+    Route::post('applications/respond', [ApplicationController::class, 'respond'])->middleware('role:admin');
+    Route::patch('{debate}/status', [DebateController::class, 'updateStatus'])->middleware('role:admin');
+    Route::patch('{debate}/cancel', [DebateController::class, 'cancel'])->middleware('role:admin');
+    Route::patch('{debate}/bugged', [DebateController::class, 'markAsBugged'])->middleware('role:admin');
+    Route::patch('{debate}/finish', [DebateController::class, 'finish'])->middleware('role:admin');
+});

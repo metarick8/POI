@@ -8,14 +8,14 @@ class ResponseToDebateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
-    }
+        return auth()->user()->role === 'admin';
+    } 
 
     public function rules(): array
     {
         return [
-            "response" => ['required', 'boolean'],
-            'application_id' => ['required', 'integer', 'exists:applications,id']
+            'application_id' => ['required', 'integer', 'exists:applications,id'],
+            'response' => ['required', 'string', 'in:approved,rejected'],
         ];
     }
 }

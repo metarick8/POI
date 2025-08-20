@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -16,6 +17,12 @@ return new class extends Migration
             $table->index('status');
             $table->integer('judge_count')->default(0)->after('status');
             $table->integer('debater_count')->default(0)->after('status');
+            // Change ENUM to VARCHAR and add a comment
+        DB::statement("ALTER TABLE debates MODIFY COLUMN status VARCHAR(255) NOT NULL
+        COMMENT 'Status of the debate (e.g., announced, playersConfirmed, debatePreperation, ongoing, finished, cancelled, bugged)'");
+        // Optionally, add a check constraint to restrict values (MySQL 8.0.16+)
+        DB::statement("ALTER TABLE debates ADD CONSTRAINT check_status CHECK
+        (status IN ('announced', 'playersConfirmed', 'debatePreperation', 'ongoing', 'finished', 'cancelled', 'bugged'))");
         });
     }
 
@@ -29,5 +36,11 @@ return new class extends Migration
             $table->dropIndex(['judge_count']);
             $table->dropIndex(['debater_count']);
         });
+        // Drop the check constraint (if added)
+        DB::statement('ALTER TABLE debates DROP CONSTRAINT check_status');
+
+        // Revert to ENUM
+        DB::statement("ALTER TABLE debates MODIFY COLUMN status
+        ENUM('announced', 'playersConfirmed', 'debatePreperation', 'ongoing', 'finished', 'cancelled', 'bugged') NOT NULL");
     }
 };

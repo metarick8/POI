@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Http\Requests\AdminRegisterRequest;
+use App\Models\Admin;
 use App\Models\Coach;
 use App\Models\Debater;
 use App\Models\Judge;
@@ -9,10 +11,26 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class AuthService
 {
+    public function createAdmin(AdminRegisterRequest $request)
+    {
+        DB::beginTransaction();
+        try {
+            $data = $request->validated();
+            $data['password'] = Hash::make($data['password']);
+            $admin = Admin::create($data);
+            DB::commit();
+            return $admin;
+        } catch (Throwable $t) {
+            DB::rollBack();
+            return $t;
+        }
+    }
+
     public function createUser($request)
     {
         DB::beginTransaction();
@@ -35,7 +53,7 @@ class AuthService
             return $user;
         } catch (Throwable $t) {
             DB::rollBack();
-            throw $t;
+            return $t;
         }
     }
 
@@ -51,7 +69,7 @@ class AuthService
             return $user;
         } catch (Throwable $t) {
             DB::rollBack();
-            throw $t;
+            return $t;
         }
     }
 
@@ -63,9 +81,6 @@ class AuthService
             $coachId = $request->get('coach_id');
             if ($coachId) {
                 $coach = Coach::find($coachId);
-                if (!$coach) {
-                    throw new \Exception("Invalid coach_id: $coachId. No corresponding coach found.");
-                }
             }
             Debater::create([
                 'user_id' => $user->id,
@@ -75,7 +90,7 @@ class AuthService
             return $user;
         } catch (Throwable $t) {
             DB::rollBack();
-            throw $t;
+            return $t;
         }
     }
     public function createJudge($request)
@@ -90,7 +105,7 @@ class AuthService
             return $user;
         } catch (Throwable $t) {
             DB::rollBack();
-            throw $t;
+            return $t;
         }
     }
 
@@ -122,7 +137,7 @@ class AuthService
             return true;
         } catch (Throwable $t) {
             DB::rollBack();
-            throw $t;
+            return $t;
         }
     }
 }

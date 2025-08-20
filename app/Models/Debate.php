@@ -17,16 +17,19 @@ class Debate extends Model
         'winner',
         'summary',
         'cancellation_reason',
+        'judge_count',
+        'debater_count',
     ];
 
     protected $casts = [
-        'status' => 'string',
+        'start_date' => 'date',
         'type' => 'string',
+        'status' => 'string',
     ];
 
     public function motion()
     {
-        return $this->belongsTo(Motion::class, 'motion_id');
+        return $this->belongsTo(Motion::class);
     }
 
     public function chairJudge()
@@ -34,33 +37,37 @@ class Debate extends Model
         return $this->belongsTo(Judge::class, 'chair_judge_id');
     }
 
-    // public function panelistJudges()
-    // {
-    //     return $this->hasMany(PanelistJudge::class, 'debate_id');
-    // }
-
-    public function participantsDebaters()
+    public function panelistJudges()
     {
-        return $this->hasMany(ParticipantsDebater::class, 'debate_id');
+        return $this->hasMany(Participants_panelist_judge::class);
     }
 
     public function applications()
     {
-        return $this->hasMany(Application::class, 'debate_id');
+        return $this->hasMany(Application::class);
     }
 
-    public function getApplicantsCountAttribute()
+    public function debaters()
     {
-        return $this->applications()->count();
+        return $this->belongsToMany(User::class, 'applications', 'debate_id', 'user_id')
+            ->where('applications.status', 'approved')
+            ->where('applications.type', 'debater');
     }
 
-    public function getDebatersCountAttribute()
+    public function judges()
     {
-        return $this->participantsDebaters()->count();
+        return $this->belongsToMany(User::class, 'applications', 'debate_id', 'user_id')
+            ->where('applications.status', 'approved')
+            ->whereIn('applications.type', ['chair_judge', 'panelist_judge']);
     }
 
-    public function getPanelistJudgesCountAttribute()
+    public function getDebaterCountAttribute()
     {
-        return $this->panelistJudges()->count();
+        return $this->debaters()->count();
+    }
+
+    public function getJudgeCountAttribute()
+    {
+        return $this->judges()->count();
     }
 }

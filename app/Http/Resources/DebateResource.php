@@ -29,7 +29,7 @@ class DebateResource extends JsonResource
             'filter' => $this->filter ?? null,
             'motion' => $this->when(
                 in_array($this->status, ['announced', 'applied', 'ongoing']),
-                fn () => $this->motion ? [
+                fn() => $this->motion ? [
                     'motion_id' => $this->motion->id,
                     'title' => $this->motion->title ?? 'Motion not set',
                     'type' => $this->motion->type ?? 'Type not specified',
@@ -37,25 +37,26 @@ class DebateResource extends JsonResource
             ),
             'chair_judge' => $this->when(
                 in_array($this->status, ['announced', 'applied', 'ongoing', 'finished']),
-                fn () => $this->chairJudge ? [
+                fn() => $this->chairJudge ? [
                     'chair_judge_id' => $this->chairJudge->id,
                     'name' => $this->chairJudge->name ?? 'Judge not set',
                 ] : null
             ),
             'applicants_count' => $this->when(
-                $this->status === 'applied',
-                fn () => $this->applicants_count ?? 0
+                $this->status === 'applied' || 'announced',
+                fn() => $this->applicants_count ?? 0
             ),
+            'is_able_to_apply' => $this->isAbleToApply ?? false, // Include isAbleToApply
             'details' => $this->when(
                 $this->status === 'finished',
-                fn () => [
+                fn() => [
                     'winner' => $this->winner ?? 'No winner declared',
                     'summary' => $this->summary ?? 'No summary available',
                 ]
             ),
             'reason' => $this->when(
                 in_array($this->status, ['cancelled', 'bugged']),
-                fn () => $this->cancellation_reason ?? 'No reason provided'
+                fn() => $this->cancellation_reason ?? 'No reason provided'
             ),
         ];
     }

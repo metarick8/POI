@@ -12,7 +12,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('debate_id');
-            $table->string('status');
+            $table->string('status')->default('pending'); // pending, approved, rejected
+            $table->string('type')->nullable(); // debater, chair_judge, panelist_judge
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('debate_id')->references('id')->on('debates')->onDelete('cascade');
             $table->timestamps();
