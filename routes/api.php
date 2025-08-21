@@ -36,7 +36,7 @@ Route::get('this/test', function (){
 Route::get('debate/apply/{debateId}', [ApplicationController::class, 'apply']);
 Route::post('test', [AuthController::class, 'test']);
 
-
+            
 Route::prefix('debates')->middleware(JwtMiddleware::class)->group(function () {
     Route::get('/', [DebateController::class, 'index']);
     Route::get('{debate}', [DebateController::class, 'show']);

@@ -17,9 +17,8 @@ class ApplicationPolicy
         }
 
         $hasApplied = $debate->applications()->where('user_id', $user->id)->exists();
-        if ($hasApplied) {
+        if ($hasApplied)
             return false;
-        }
 
         return $debate->debater_count < 8;
     }
@@ -38,7 +37,7 @@ class ApplicationPolicy
         if ($judgeType === 'chair')
             return $debate->chair_judge_id === null && $debate->judge_count < 3;
 
-            return $debate->judge_count < 3;
+        return $debate->judge_count < 3;
     }
 
     public function manageApplications(User $user): bool
