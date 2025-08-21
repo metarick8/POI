@@ -9,7 +9,8 @@ class ParticipantsDebater extends Model
     protected $fillable = [
         'debate_id',
         'debater_id',
-        'speaker_id'
+        'speaker_id',
+        'rank'
     ];
 
 
