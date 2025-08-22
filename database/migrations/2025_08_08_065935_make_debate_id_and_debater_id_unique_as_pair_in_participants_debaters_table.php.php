@@ -12,8 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('participants_debaters', function (Blueprint $table) {
-            $table->foreign('debate_id')->references('id')->on('debates')->onDelete('cascade');
-            $table->foreign('debater_id')->references('id')->on('debaters')->onDelete('cascade');
             $table->unique(['debate_id', 'debater_id'], 'debate_debater_unique');
         });
     }
