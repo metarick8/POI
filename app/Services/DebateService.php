@@ -9,9 +9,14 @@ use Throwable;
 
 class DebateService
 {
-    public function index($perPage = 50)
+    public function index(array $status = [],$perPage=2)
     {
-        return Debate::with(['motion', 'chairJudge'])->paginate($perPage);
+        $query = Debate::with(['motion', 'chairJudge']);
+
+        if (!empty($status)) {
+            $query->whereIn('status', $status);
+        }
+        return $query->paginate($perPage);
     }
 
     public function create($request)

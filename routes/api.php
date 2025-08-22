@@ -31,7 +31,6 @@ Route::get('motion/get', [MotionController::class, 'index']);
 Route::post('motion/create', [MotionController::class, 'create']);
 Route::patch('motion/update', [MotionController::class, 'update']);
 Route::delete('motion/delete/{motionId}', [MotionController::class, 'delete']);
-Route::get('debates/index', [DebateController::class, 'index']);
 Route::get('data/education', [FacultyController::class, 'index']);
 Route::post('register-application/debates/{debate}',[ApplicationController::class,'request']);
 //debater
