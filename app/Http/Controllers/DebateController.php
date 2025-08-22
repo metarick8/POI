@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DebateInitializeRequest;
+use App\Http\Requests\ListDebatesRequest;
 use App\Http\Resources\DebateResource;
 use App\JSONResponseTrait;
 use App\Models\Debate;
@@ -25,7 +26,7 @@ class DebateController extends Controller
         $this->authController = $authController;
     }
 
-    public function index()
+    public function index(ListDebatesRequest $request)
     {
         if (!$user = JWTAuth::parseToken()->authenticate())
             return response()->json(['error' => 'User not found'], 404);
@@ -42,7 +43,7 @@ class DebateController extends Controller
             'model' => get_class($user)
         ]);
 
-        $debates = $this->debateService->index();
+        $debates = $this->debateService->index($request->validatedStatus());
         $debates->getCollection()->transform(function ($debate) use ($user, $actor) {
             $isAbleToApply = false;
             if ($actor === 'debater')
@@ -136,12 +137,12 @@ class DebateController extends Controller
             return $this->errorResponse("Current Debate Status isn't (playersConfirmed)",403);
         }
     }
-    public function index() {
-                try {
-            $debates = $this->debateService->index();
-            return $this->successResponse("Education data:",$debates, 200);
-        } catch (\Throwable $t) {
-            return $this->errorResponse("Something went wrong!", $t->getMessage());
-        }
-    }
+    // public function index() {
+    //             try {
+    //         $debates = $this->debateService->index();
+    //         return $this->successResponse("Education data:",$debates, 200);
+    //     } catch (\Throwable $t) {
+    //         return $this->errorResponse("Something went wrong!", $t->getMessage());
+    //     }
+    // }
 }
