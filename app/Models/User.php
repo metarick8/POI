@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,7 +12,6 @@ class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
-    protected $guard = 'web';
     protected $fillable = [
         'first_name',
         'last_name',
@@ -25,18 +23,9 @@ class User extends Authenticatable implements JWTSubject
         'governorate',
         'mobile_number',
         'education_degree',
-        'birth_date'
+        'birth_date',
+        'role', // admin, user
     ];
-
-    public function getJWTIdentifier()
-    {
-        return $this->getKey();
-    }
-
-    public function getJWTCustomClaims()
-    {
-        return [];
-    }
 
     protected $hidden = [
         'password',
@@ -46,8 +35,21 @@ class User extends Authenticatable implements JWTSubject
     protected function casts(): array
     {
         return [
-            'birth_date' => 'date', // Cast birth_date to date
-            'education_degree' => 'string', // Cast education_degree to string (enum)
+            'birth_date' => 'date',
+            'education_degree' => 'string',
+            'role' => 'string',
+        ];
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [
+            'role' => $this->role,
         ];
     }
 
@@ -56,7 +58,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(Debater::class, 'user_id', 'id');
     }
 
-    public function coach(): HasOne
+    public function coach()
     {
         return $this->hasOne(Coach::class, 'user_id', 'id');
     }
@@ -73,8 +75,6 @@ class User extends Authenticatable implements JWTSubject
 
     public function applications()
     {
-        return $this->belongsToMany(Debate::class, 'applications', 'user_id', 'debate_id')
-            ->withTimestamps()
-            ->using(Application::class);
+        return $this->hasMany(Application::class, 'user_id', 'id');
     }
 }

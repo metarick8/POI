@@ -12,16 +12,17 @@ return new class extends Migration
             $table->id();
             $table->string('first_name');
             $table->string('last_name');
-            $table->string("profile_picture_url")->nullable();
-            $table->string("pp_public_id")->nullable();
+            $table->string('profile_picture_url')->nullable();
+            $table->string('pp_public_id')->nullable();
             $table->unsignedBigInteger('faculty_id');
-            $table->string("governorate");
+            $table->string('governorate');
             $table->string('mobile_number', 10);
             $table->enum('education_degree', ['bachelor', 'master', 'doctoral']);
             $table->date('birth_date');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('role')->default('user'); // admin, user
             $table->foreign('faculty_id')->references('id')->on('faculties')->onDelete('cascade');
             $table->rememberToken();
             $table->timestamps();

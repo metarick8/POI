@@ -2,24 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Database\Eloquent\Model;
 
-class Coach extends Authenticatable  implements JWTSubject
+class Coach extends Model
 {
     protected $fillable = [
         'user_id',
     ];
-
-    public function getJWTIdentifier()
-    {
-        return $this->getKey();
-    }
-
-    public function getJWTCustomClaims()
-    {
-        return [];
-    }
 
     public function user()
     {
@@ -34,5 +23,10 @@ class Coach extends Authenticatable  implements JWTSubject
     public function teams()
     {
         return $this->belongsToMany(Debater::class, 'coach_teams', 'coach_id', 'debater_id');
+    }
+
+    public function applications()
+    {
+        return $this->hasManyThrough(Application::class, User::class, 'id', 'user_id', 'user_id', 'id');
     }
 }

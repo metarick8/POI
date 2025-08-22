@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AdminRegisterRequest;
 use App\Http\Requests\CoachRegisterRequest;
 use App\Http\Requests\DebaterRegisterRequest;
 use App\Http\Requests\FileUploadRequest;
 use App\Http\Requests\JudgeRegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UserProfileRequest;
+use App\Http\Resources\AdminResource;
 use App\Http\Resources\CoachResource;
 use App\Http\Resources\DebaterResource;
 use App\Http\Resources\JudgeResource;
 use App\Http\Resources\MobileUserResource;
 use App\JSONResponseTrait;
+use App\Models\Admin;
 use App\Models\Coach;
 use App\Models\Debater;
 use App\Models\Judge;
@@ -53,6 +56,7 @@ class AuthController extends Controller
             'user' => ['registerUser', UserProfileRequest::class],
             'coach' => ['registerCoach', CoachRegisterRequest::class],
             'judge' => ['registerJudge', JudgeRegisterRequest::class],
+            'admin' => ['registerAdmin', AdminRegisterRequest::class], // Add admin
         ];
 
         if (!array_key_exists($actor, $registerMethods)) {
@@ -324,12 +328,24 @@ class AuthController extends Controller
             return $this->errorResponse("Something went wrong!", $t->getMessage());
         }
     }
+
+    public function registerAdmin(AdminRegisterRequest $request)
+    {
+        try {
+            Log::debug('Register Admin Request: ', $request->all());
+            $admin = $this->authService->createAdmin($request);
+            return $this->successResponse("Admin has been created!", new AdminResource($admin), 201);
+        } catch (\Throwable $t) {
+            Log::error('Register Admin Error: ' . $t->getMessage());
+            return $this->errorResponse("Something went wrong!", $t->getMessage());
+        }
+    }
     /**
      * @OA\Post(
      *     path="/api/login",
-     *     summary="Authenticate user",
+     *     summary="Authenticate user or admin",
      *     tags={"Authentication"},
-     * @OA\RequestBody(
+     *     @OA\RequestBody(
      *         required=true,
      *         description="Login credentials",
      *         @OA\JsonContent(
@@ -337,14 +353,14 @@ class AuthController extends Controller
      *             @OA\Property(property="email", type="string", example="jad@email.com"),
      *             @OA\Property(property="password", type="string", example="12345678")
      *         )
-     * ),
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Login successful",
      *         @OA\JsonContent(
      *             type="object",
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="LoggedIn successfully!"),
+     *             @OA\Property(property="message", type="string", example="Logged in successfully!"),
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
@@ -363,26 +379,55 @@ class AuthController extends Controller
      *             @OA\Property(property="errors", type="string", nullable=true, example=null)
      *         )
      *     ),
-     * @OA\Response(response="401", description="Invalid credentials")
+     *     @OA\Response(response="401", description="Invalid credentials")
      * )
      */
-
     public function login(LoginRequest $request)
     {
-        $email = $request->get('email');
-        $password = $request->get('password');
-        if (!Auth::guard('user')->attempt(['email' => $email, 'password' => $password]))
-            return response()->json(['error' => 'Unauthorized'], 401);
-        $user = Auth::guard('user')->user();
-        [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
-        if (!$actorResource)
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            $email = $request->get('email');
+            $password = $request->get('password');
 
-        $token = Auth::guard($actor)->login($user);
-        return $this->successResponse("LoggedIn successfully !", [
-            "token" => $token,
-            "guard" => $actor,
-        ]);
+            Log::debug('Login attempt started', ['email' => $email]);
+
+            Log::debug('Attempting user guard authentication', ['email' => $email]);
+            if (Auth::guard('user')->attempt(['email' => $email, 'password' => $password])) {
+                Log::debug('User guard authentication successful', ['email' => $email]);
+                $user = Auth::guard('user')->user();
+                [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
+                Log::debug('Actor determined', ['actor' => $actor, 'user_id' => $user->id]);
+                if (!$actorResource) {
+                    Log::debug('Actor resource not found', ['user_id' => $user->id]);
+                    return $this->errorResponse('Unauthorized', null, ['Actor resource not found'], 401);
+                }
+                $token = Auth::guard($actor)->login($user);
+                return $this->successResponse("Logged in successfully!", [
+                    "token" => $token,
+                    "guard" => $actor,
+                ]);
+            }
+            Log::debug('User guard authentication failed', ['email' => $email]);
+
+            // Attempt authentication with the admin guard
+            Log::debug('Attempting admin guard authentication', ['email' => $email]);
+            if (Auth::guard('admin')->attempt(['email' => $email, 'password' => $password])) {
+                Log::debug('Admin guard authentication successful', ['email' => $email]);
+                $admin = Auth::guard('admin')->user();
+                Log::debug('Admin retrieved', ['admin_id' => $admin->id, 'email' => $admin->email]);
+                $token = Auth::guard('admin')->login($admin);
+                return $this->successResponse("Logged in successfully!", [
+                    "token" => $token,
+                    "guard" => 'admin',
+                ]);
+            }
+            Log::debug('Admin guard authentication failed', ['email' => $email]);
+
+            Log::debug('Both user and admin guard authentication failed', ['email' => $email]);
+            return $this->errorResponse('Unauthorized', null, ['Invalid credentials'], 401);
+        } catch (\Throwable $t) {
+            Log::error('Login Error: ' . $t->getMessage(), ['email' => $request->get('email')]);
+            return $this->errorResponse("Something went wrong!", null, [$t->getMessage()], 500);
+        }
     }
     /**
      * @OA\Get(
@@ -509,12 +554,14 @@ class AuthController extends Controller
         $actor = Coach::where('user_id', $userId)->first()
             ?? Judge::where('user_id', $userId)->first()
             ?? Debater::where('user_id', $userId)->first()
+            ?? Admin::find($userId) // Use find() since Admin uses id directly
             ?? User::find($userId);
 
         $guard = match (get_class($actor)) {
             Coach::class => 'coach',
             Judge::class => 'judge',
             Debater::class => 'debater',
+            Admin::class => 'admin',
             default => 'user',
         };
 
@@ -522,6 +569,7 @@ class AuthController extends Controller
             'coach' => CoachResource::class,
             'judge' => JudgeResource::class,
             'debater' => DebaterResource::class,
+            'admin' => AdminResource::class,
             default => MobileUserResource::class,
         };
 
@@ -616,6 +664,8 @@ class AuthController extends Controller
 
     public function test(Request $request)
     {
-    return $this->successResponse("Test response", "Test");
+        $string = $request->get('string');
+        $value = $request->get('number') + 5;
+        return $this->successResponse("Test response", [$value, $string]);
     }
 }

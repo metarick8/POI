@@ -3,130 +3,152 @@
 namespace App\Services\Debate;
 
 use App\Http\Requests\ResponseToDebateRequest;
-use App\JSONResponseTrait;
 use App\Models\Application;
 use App\Models\Debate;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
-use Tymon\JWTAuth\Facades\JWTAuth;
+use App\JSONResponseTrait;
 
 class ApplicationService
 {
     use JSONResponseTrait;
 
-    public function index()
+    public function requestDebater(Debate $debate)
     {
-        return Application::all();
-    }
+        $user = Auth::user();
+        if (!$user) {
+            return $this->errorResponse('User not authenticated', '', ['User not authenticated'], 401);
+        }
 
-    public function debateIndex(int $debateId)
-    {
-        $debate = Debate::findOrFail($debateId);
-        if ($debate->is_null)
-            return $this->errorResponse('Debate not found!', $debateId, [], 400);
+        if (!$user->can('applyDebater', $debate)) {
+            return $this->errorResponse('You cannot apply to this debate', '', ['Unauthorized or max debaters reached'], 403);
+        }
 
-        return $debate->applications();
-    }
-    //from Omar: isn't there a middleware for auth? rather than doing it in code?
-    public function request(Debate $debate)
-    {
-        if (!$user = JWTAuth::parseToken()->authenticate())
-            return $this->errorResponse('User not found!', '', ['User not found!'], 400);
-        //from Omar: as did in the api.php it's impossible to be null because it would return 404 before entering the method
-        if ($debate->is_null)
-            return $this->errorResponse('Debate not found!', '', [], 400);
-        Application::create([
-            'user_id' => $user->id,
-            'debate_id' => $debate->id,
-            'status' => 'pending'
-        ]);
-    }
-
-
-    //from Omar: this code has problems (missing the type of the user whether judge or debater!)
-    public function response(ResponseToDebateRequest $request)
-    {
-        $applicationId = $request->get('application_id');
-        $application = Application::findOrFail($applicationId);
-       [$debaterIsMax, $judgeIsMax] = $this->applicationAvailabilty($applicationId, $application->debate_id);
-
-        if ($debaterIsMax)
-            return $this->errorResponse('This debate has reached the maximum numner of debaters', '');
-
-        if ($judgeIsMax)
-            return $this->errorResponse('This debate has reached the maximum number of judges', '');
-
-        if ($request->get('response'))
-            $application->status = 'accepted';
-        else
-            $application->status = 'rejected';
-        $application->touch();
-        $application->save();
-    }
-
-    public function resign(int $debateId) //or $applicationId
-    {
+        DB::beginTransaction();
         try {
-            $currentPLayersinDebate = Application::where([
-                ['debate_id', $debateId],
-                ['status', 'accepted']
-            ])->count();
+            $application = Application::create([
+                'user_id' => $user->id,
+                'debate_id' => $debate->id,
+                'status' => 'pending',
+                'type' => 'debater',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-            if ($currentPLayersinDebate = 8) {
-                $debate = Debate::findOrFail($debateId)->get();
-                $debate->status = 'announced';
-                $debate->touch();
+            Log::info("Debater application created for debate {$debate->id}", [
+                'user_id' => $user->id,
+                'debate_id' => $debate->id,
+                'type' => 'debater',
+                'timezone' => now()->timezone->getName(),
+            ]);
 
-                //to be continued on the application logic
+            DB::commit();
+            return $application;
+        } catch (Throwable $t) {
+            DB::rollBack();
+            Log::error("Failed to create debater application: {$t->getMessage()}");
+            return $this->errorResponse('Failed to apply', '', [$t->getMessage()], 500);
+        }
+    }
+
+    public function requestJudge(Debate $debate, string $judgeType)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return $this->errorResponse('User not authenticated', '', ['User not authenticated'], 401);
+        }
+
+        if (!$user->can('applyJudge', [$debate, $judgeType])) {
+            return $this->errorResponse('You cannot apply as a judge', '', ['Unauthorized or max judges reached'], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            $application = Application::create([
+                'user_id' => $user->id,
+                'debate_id' => $debate->id,
+                'status' => 'pending',
+                'type' => $judgeType === 'chair' ? 'chair_judge' : 'panelist_judge',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            Log::info("Judge application created for debate {$debate->id}", [
+                'user_id' => $user->id,
+                'debate_id' => $debate->id,
+                'type' => $judgeType === 'chair' ? 'chair_judge' : 'panelist_judge',
+                'timezone' => now()->timezone->getName(),
+            ]);
+
+            DB::commit();
+            return $application;
+        } catch (Throwable $t) {
+            DB::rollBack();
+            Log::error("Failed to create judge application: {$t->getMessage()}");
+            return $this->errorResponse('Failed to apply', '', [$t->getMessage()], 500);
+        }
+    }
+
+    public function respond(ResponseToDebateRequest $request, Application $application)
+    {
+        $user = Auth::user();
+        if (!$user || !$user->can('manageApplications')) {
+            return $this->errorResponse('Unauthorized to manage applications', '', ['Unauthorized'], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            $debate = $application->debate;
+            $isJudge = in_array($application->type, ['chair_judge', 'panelist_judge']);
+
+            if ($request->response === 'approved') {
+                if ($application->type === 'debater' && $debate->debater_count >= 8) {
+                    return $this->errorResponse('Max debaters reached', '', ['Max debaters reached'], 403);
+                }
+                if ($isJudge && $debate->judge_count >= 3) {
+                    return $this->errorResponse('Max judges reached', '', ['Max judges reached'], 403);
+                }
+                if ($application->type === 'chair_judge' && $debate->chair_judge_id !== null) {
+                    return $this->errorResponse('Chair judge already assigned', '', ['Chair judge already assigned'], 403);
+                }
+
+                $application->update(['status' => 'approved', 'updated_at' => now()]);
+
+                if ($application->type === 'debater') {
+                    $debate->update(['debater_count' => $debate->debater_count + 1, 'updated_at' => now()]);
+                } elseif ($isJudge) {
+                    $debate->update(['judge_count' => $debate->judge_count + 1, 'updated_at' => now()]);
+                    if ($application->type === 'chair_judge') {
+                        $debate->update(['chair_judge_id' => $application->user_id, 'updated_at' => now()]);
+                    } else {
+                        $debate->panelistJudges()->create([
+                            'judge_id' => $application->user_id,
+                            'created_at' => now(),
+                        ]);
+                    }
+                }
+            } else {
+                $application->update(['status' => 'rejected', 'updated_at' => now()]);
             }
 
-            $application = Application::where([
-                ['user_id', auth()->id],
-                ['debate_id', $debateId]
-            ])->first();
+            Log::info("Application {$application->id} updated", [
+                'debate_id' => $debate->id,
+                'user_id' => $application->user_id,
+                'status' => $application->status,
+                'type' => $application->type,
+                'timezone' => now()->timezone->getName(),
+            ]);
 
-            $application->status = 'cancelled';
-            $application->touch();
-            $application->save();
+            DB::commit();
+            return $application;
         } catch (Throwable $t) {
-            throw $t->getMessage();
+            DB::rollBack();
+            Log::error("Failed to process application {$application->id}: {$t->getMessage()}");
+            return $this->errorResponse('Failed to process application', '', [$t->getMessage()], 500);
         }
-    }
-
-
-    //from Omar: this code has problems
-    private function  applicationAvailabilty(int $applicationId, $debateId)
-    {
-
-        $debateApplications = Application::where([
-            ['debate_id', $debateId],
-            ['status', 'accepted']
-        ])->get();
-
-        $debaterNumbers = 0;
-        $judgeNumbers = 0;
-
-        $maxDebateNumbers = 8;
-        $maxJudgeNumbers = 3;
-
-        $authcontroller = app(\App\Http\Controllers\AuthController::class);
-
-        foreach ($debateApplications as $debateApplication) {
-            $actor = $authcontroller->getAuthenticatedActor($debateApplication->user_id);
-            // [$actor, $actorResource] = $authcontroller->getAuthenticatedActor($debateApplication->user_id);
-            if ($actor = 'debater')
-                $debaterNumbers++;
-            if ($actor = 'judge')
-                $judgeNumbers++;
-        }
-
-        $debaterIsMaximum = 0;
-        $judgeIsMaximum = 0;
-        if ($debaterNumbers = $maxDebateNumbers)
-            $debaterIsMaximum = 1;
-
-        if ($judgeNumbers = $maxJudgeNumbers)
-            $judgeIsMaximum = 1;
-
-        return [$debaterIsMaximum, $judgeIsMaximum];
     }
 }
+
+
