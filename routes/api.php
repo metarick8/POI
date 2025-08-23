@@ -13,6 +13,7 @@ use App\Http\Middleware\JwtMiddleware;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\LiveController;
+use App\Http\Controllers\UniversityController;
 
 Route::controller(AuthController::class)->group(function () {
     Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach|admin');
@@ -24,6 +25,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::delete('destroy/image', 'destroyImage');
 });
 
+Route::get('universities/list', [UniversityController::class, 'list']);
 Route::post('documentation')->withoutMiddleware('');
 
 Route::get('motion/classification', [SubClassificationController::class, 'index']);
@@ -33,7 +35,7 @@ Route::patch('motion/update', [MotionController::class, 'update']);
 Route::delete('motion/delete/{motionId}', [MotionController::class, 'delete']);
 Route::get('data/education', [FacultyController::class, 'index']);
 Route::post('register-application/debates/{debate}',[ApplicationController::class,'request']);
-//debater
+
 Route::post('/debates/{debate}/participate',[DebaterController::class,'participate']);
 //admin
     //this one needs to be changed alot
