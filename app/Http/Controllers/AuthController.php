@@ -506,12 +506,65 @@ class AuthController extends Controller
     {
         try {
             Log::debug('Profile: Attempting to authenticate');
-            $user = JWTAuth::parseToken()->authenticate();
+            $token = request()->bearerToken();
+            Log::debug('Profile: Token received', ['token' => $token]);
+
+            // List all possible guards
+            $guards = ['user', 'debater', 'judge', 'coach', 'admin'];
+            $user = null;
+            $guard = null;
+
+            foreach ($guards as $g) {
+                Log::debug('Profile: Checking guard', ['guard' => $g]);
+                Auth::shouldUse($g);
+
+                // Try to get the authenticated user from the guard
+                if ($authUser = Auth::guard($g)->user()) {
+                    $user = $authUser;
+                    $guard = $g;
+                    Log::debug('Profile: User found with guard', [
+                        'guard' => $g,
+                        'user_id' => $user->id,
+                        'email' => $user->email ?? 'N/A'
+                    ]);
+                    break;
+                }
+
+                // Fallback to JWTAuth authentication
+                try {
+                    JWTAuth::setToken($token);
+                    $payload = JWTAuth::parseToken()->getPayload();
+                    Log::debug('Profile: Token payload for guard', [
+                        'guard' => $g,
+                        'payload' => $payload->toArray()
+                    ]);
+
+                    if ($authUser = JWTAuth::parseToken()->authenticate()) {
+                        $user = $authUser;
+                        $guard = $g;
+                        Log::debug('Profile: JWTAuth authenticated with guard', [
+                            'guard' => $g,
+                            'user_id' => $user->id,
+                            'email' => $user->email ?? 'N/A'
+                        ]);
+                        Auth::guard($g)->setUser($user);
+                        break;
+                    }
+                } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+                    Log::error('Profile: Token invalid for guard', ['guard' => $g, 'error' => $e->getMessage()]);
+                    continue;
+                } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+                    Log::error('Profile: JWT error for guard', ['guard' => $g, 'error' => $e->getMessage()]);
+                    continue;
+                }
+            }
+
             if (!$user) {
-                Log::error('Profile: User not found');
+                Log::error('Profile: User not found for any guard', ['token' => $token]);
                 return response()->json(['error' => 'User not found'], 404);
             }
-            Log::debug('Profile: User authenticated', ['user_id' => $user->id]);
+
+            Log::debug('Profile: User authenticated', ['user_id' => $user->id, 'guard' => $guard]);
 
             [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
             Log::debug('Profile: Actor determined', ['actor' => $actor]);
