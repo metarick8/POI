@@ -504,12 +504,28 @@ class AuthController extends Controller
 
     public function profile()
     {
-        if (!$user = JWTAuth::parseToken()->authenticate())
-            return response()->json(['error' => 'User not found'], 404);
-        [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
-        return $this->successResponse("Here's your $actor profile", [
-            $actorResource
-        ]);
+        try {
+            Log::debug('Profile: Attempting to authenticate');
+            $user = JWTAuth::parseToken()->authenticate();
+            if (!$user) {
+                Log::error('Profile: User not found');
+                return response()->json(['error' => 'User not found'], 404);
+            }
+            Log::debug('Profile: User authenticated', ['user_id' => $user->id]);
+
+            [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
+            Log::debug('Profile: Actor determined', ['actor' => $actor]);
+
+            return $this->successResponse("Here's your $actor profile", [
+                $actorResource
+            ]);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            Log::error('Profile: Invalid token', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Invalid token'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            Log::error('Profile: Token error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Token not provided'], 401);
+        }
     }
 
     public function editProfile(UserProfileRequest $request)

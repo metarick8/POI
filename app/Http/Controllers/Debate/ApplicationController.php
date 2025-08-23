@@ -21,9 +21,10 @@ class ApplicationController extends Controller
     {
         $this->applicationService = $applicationService;
     }
-    
+
     public function applyDebater(ApplyDebaterRequest $request)
     {
+        return 1;
         $debate = Debate::findOrFail($request->debate_id);
         $result = $this->applicationService->requestDebater($debate);
 

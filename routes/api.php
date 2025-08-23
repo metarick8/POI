@@ -19,7 +19,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('login', 'login');
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
-    Route::get('profile', 'profile');
+    Route::get('profile', 'profile')->middleware(JwtMiddleware::class);
     Route::post('upload/image', 'uploadImage');
     Route::delete('destroy/image', 'destroyImage');
 });
@@ -51,7 +51,7 @@ Route::get('this/test', function (){
 Route::get('debate/apply/{debateId}', [ApplicationController::class, 'apply']);
 Route::post('test', [AuthController::class, 'test']);
 
-            
+
 Route::prefix('debates')->middleware(JwtMiddleware::class)->group(function () {
     Route::get('/', [DebateController::class, 'index']);
     Route::get('{debate}', [DebateController::class, 'show']);
