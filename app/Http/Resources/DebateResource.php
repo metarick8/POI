@@ -58,6 +58,7 @@ class DebateResource extends JsonResource
                 in_array($this->status, ['cancelled', 'bugged']),
                 fn() => $this->cancellation_reason ?? 'No reason provided'
             ),
+            
         ];
     }
 }

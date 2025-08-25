@@ -12,6 +12,7 @@ class CoachResource extends JsonResource
         return [
             'profile' => [
                 'id' => $this->id,
+                'user_id' => $this->user->id,
                 'first_name' => $this->user->first_name,
                 'last_name' => $this->user->last_name,
                 'email' => $this->user->email,
@@ -21,7 +22,8 @@ class CoachResource extends JsonResource
                 'birth_date' => $this->user->birth_date,
                 'education_degree' => $this->user->education_degree,
                 'faculty' => $this->user->faculty?->name,
-                'university' => $this->user->faculty?->university?->name
+                'university' => $this->user->faculty?->university?->name,
+                'account' => $this->user->isBanned() ? 'banned' : 'active',
             ],
             'team' => 'team',
             'guard' => 'coach'

@@ -10,7 +10,7 @@ class UniversityService
  public function index()
     {
         try{
-            $universities = University::with('faculties')->get();
+            return $universities = University::with('faculties')->get();
 
             if($universities->isEmpty())
                 return collect([]);

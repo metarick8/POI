@@ -13,15 +13,15 @@ return [
         ],
         'debater' => [
             'driver' => 'jwt',
-            'provider' => 'debaters',
+            'provider' => 'users', // Changed to use User model
         ],
         'judge' => [
             'driver' => 'jwt',
-            'provider' => 'judges',
+            'provider' => 'users',
         ],
         'coach' => [
             'driver' => 'jwt',
-            'provider' => 'coaches',
+            'provider' => 'users',
         ],
         'admin' => [
             'driver' => 'jwt',
@@ -34,23 +34,23 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
         ],
-        'debaters' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\Debater::class,
-        ],
-        'judges' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\Judge::class,
-        ],
-        'coaches' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\Coach::class,
-        ],
+        // Remove unused providers
+        // 'debaters' => [
+        //     'driver' => 'eloquent',
+        //     'model' => App\Models\Debater::class,
+        // ],
+        // 'judges' => [
+        //     'driver' => 'eloquent',
+        //     'model' => App\Models\Judge::class,
+        // ],
+        // 'coaches' => [
+        //     'driver' => 'eloquent',
+        //     'model' => App\Models\Coach::class,
+        // ],
         'admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,
         ],
-
     ],
 
     'passwords' => [

@@ -12,6 +12,7 @@ class DebaterResource extends JsonResource
         return [
             'profile' => [
                 'id' => $this->id,
+                'user_id' => $this->user->id,
                 'first_name' => $this->user->first_name,
                 'last_name' => $this->user->last_name,
                 'email' => $this->user->email,
@@ -22,6 +23,7 @@ class DebaterResource extends JsonResource
                 'education_degree' => $this->user->education_degree,
                 'faculty' => $this->user->faculty?->name,
                 'university' => $this->user->faculty?->university?->name,
+                'account' => $this->user->isBanned() ? 'banned' : 'active',
             ],
             'coach_name' => $this->coach->user->first_name . ' ' . $this->coach->user->last_name,
             'coach_id' => $this->coach->id,

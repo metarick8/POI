@@ -36,7 +36,6 @@ class DebateController extends Controller
             Log::error('No authenticated user found in DebateController');
             return $this->errorResponse('Unauthorized', null, ['No authenticated user found'], 401);
         }
-
         Log::debug('Authenticated user in DebateController', [
             'guard' => $actor,
             'user_id' => $user->id,
@@ -57,7 +56,7 @@ class DebateController extends Controller
         return $this->successResponse('Debates retrieved successfully', DebateResource::collection($debates));
     }
 
-    
+
     public function show(Debate $debate)
     {
         $debate->load([

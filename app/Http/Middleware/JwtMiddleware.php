@@ -11,47 +11,49 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class JwtMiddleware
 {
-    // protected string $guard;
-
-    // public function __construct(string $guard = 'user')
-    // {
-    //     $this->guard = $guard;
-    // }
-
     public function handle(Request $request, Closure $next): Response
-        {
-    //     Auth::shouldUse($this->guard);
-
-    //     try {
-    //         if (!$user = JWTAuth::parseToken()->authenticate()) {
-    //             return response()->json(['error' => 'Unauthorized'], 401);
-    //         }
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Token invalid or expired'], 403);
-    //     }
-
-    //     return $next($request);
-
+    {
         Log::debug('JwtMiddleware invoked', ['token' => $request->bearerToken()]);
 
         // List all possible guards
         $guards = ['user', 'debater', 'judge', 'coach', 'admin'];
 
         foreach ($guards as $guard) {
+            Log::debug('Attempting authentication with guard', ['guard' => $guard]);
             Auth::shouldUse($guard);
+
             try {
+                // Get the token from the request
+                $token = $request->bearerToken();
+                if (!$token) {
+                    Log::error('No token provided for guard', ['guard' => $guard]);
+                    continue;
+                }
+
+                // Manually set the token for JWTAuth
+                JWTAuth::setToken($token);
+
+                // Get the payload to log the sub claim
                 $payload = JWTAuth::parseToken()->getPayload();
                 Log::debug('Token payload for guard', [
                     'guard' => $guard,
                     'payload' => $payload->toArray()
                 ]);
-                if ($user = JWTAuth::parseToken()->authenticate()) {
+                
+                // Attempt to authenticate using the guard's provider
+                $user = Auth::guard($guard)->user();
+                if (!$user) {
+                    // If no user is authenticated, try to authenticate via JWTAuth
+                    $user = JWTAuth::parseToken()->authenticate();
+                }
+
+                if ($user) {
                     Log::debug('Authenticated with guard', [
                         'guard' => $guard,
                         'user_id' => $user->id,
                         'email' => $user->email ?? 'N/A'
                     ]);
-                    Auth::setUser($user);
+                    Auth::guard($guard)->setUser($user);
                     return $next($request);
                 }
             } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {

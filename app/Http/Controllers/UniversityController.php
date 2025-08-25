@@ -20,7 +20,7 @@ class UniversityController extends Controller
     {
         try {
             $universities = $this->universityService->index();
-            return $this->successResponse("Education data:", new MobileUserResource($user), 201);
+            return $this->successResponse('Here is the list:', $universities);
         } catch (\Throwable $t) {
             return $this->errorResponse("Something went wrong!", $t->getMessage());
         }

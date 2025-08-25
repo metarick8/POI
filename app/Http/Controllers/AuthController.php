@@ -14,6 +14,7 @@ use App\Http\Resources\CoachResource;
 use App\Http\Resources\DebaterResource;
 use App\Http\Resources\JudgeResource;
 use App\Http\Resources\MobileUserResource;
+use App\Http\Resources\UserCollection;
 use App\JSONResponseTrait;
 use App\Models\Admin;
 use App\Models\Coach;
@@ -394,6 +395,17 @@ class AuthController extends Controller
             if (Auth::guard('user')->attempt(['email' => $email, 'password' => $password])) {
                 Log::debug('User guard authentication successful', ['email' => $email]);
                 $user = Auth::guard('user')->user();
+
+                if ($user && $user->isBanned()) {
+                    Log::warning('Banned user attempted access', [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                    ]);
+                    return response()->json([
+                        'message' => 'Your account is banned',
+                        'errors' => ['You are not allowed to access this resource'],
+                    ], 403);
+                }
                 [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
                 Log::debug('Actor determined', ['actor' => $actor, 'user_id' => $user->id]);
                 if (!$actorResource) {
@@ -504,12 +516,81 @@ class AuthController extends Controller
 
     public function profile()
     {
-        if (!$user = JWTAuth::parseToken()->authenticate())
-            return response()->json(['error' => 'User not found'], 404);
-        [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
-        return $this->successResponse("Here's your $actor profile", [
-            $actorResource
-        ]);
+        try {
+            Log::debug('Profile: Attempting to authenticate');
+            $token = request()->bearerToken();
+            Log::debug('Profile: Token received', ['token' => $token]);
+
+            // List all possible guards
+            $guards = ['user', 'debater', 'judge', 'coach', 'admin'];
+            $user = null;
+            $guard = null;
+
+            foreach ($guards as $g) {
+                Log::debug('Profile: Checking guard', ['guard' => $g]);
+                Auth::shouldUse($g);
+
+                // Try to get the authenticated user from the guard
+                if ($authUser = Auth::guard($g)->user()) {
+                    $user = $authUser;
+                    $guard = $g;
+                    Log::debug('Profile: User found with guard', [
+                        'guard' => $g,
+                        'user_id' => $user->id,
+                        'email' => $user->email ?? 'N/A'
+                    ]);
+                    break;
+                }
+
+                // Fallback to JWTAuth authentication
+                try {
+                    JWTAuth::setToken($token);
+                    $payload = JWTAuth::parseToken()->getPayload();
+                    Log::debug('Profile: Token payload for guard', [
+                        'guard' => $g,
+                        'payload' => $payload->toArray()
+                    ]);
+
+                    if ($authUser = JWTAuth::parseToken()->authenticate()) {
+                        $user = $authUser;
+                        $guard = $g;
+                        Log::debug('Profile: JWTAuth authenticated with guard', [
+                            'guard' => $g,
+                            'user_id' => $user->id,
+                            'email' => $user->email ?? 'N/A'
+                        ]);
+                        Auth::guard($g)->setUser($user);
+                        break;
+                    }
+                } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+                    Log::error('Profile: Token invalid for guard', ['guard' => $g, 'error' => $e->getMessage()]);
+                    continue;
+                } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+                    Log::error('Profile: JWT error for guard', ['guard' => $g, 'error' => $e->getMessage()]);
+                    continue;
+                }
+            }
+
+            if (!$user) {
+                Log::error('Profile: User not found for any guard', ['token' => $token]);
+                return response()->json(['error' => 'User not found'], 404);
+            }
+
+            Log::debug('Profile: User authenticated', ['user_id' => $user->id, 'guard' => $guard]);
+
+            [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
+            Log::debug('Profile: Actor determined', ['actor' => $actor]);
+
+            return $this->successResponse("Here's your $actor profile", [
+                $actorResource
+            ]);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            Log::error('Profile: Invalid token', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Invalid token'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            Log::error('Profile: Token error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Token not provided'], 401);
+        }
     }
 
     public function editProfile(UserProfileRequest $request)
@@ -668,4 +749,78 @@ class AuthController extends Controller
         $value = $request->get('number') + 5;
         return $this->successResponse("Test response", [$value, $string]);
     }
+
+    public function index()
+    {
+        try {
+            $users = User::with(['debater', 'coach', 'judge', 'faculty.university'])
+                ->get();
+
+            Log::info('Retrieved non-admin users', [
+                'count' => $users->count(),
+            ]);
+
+            return $this->successResponse('Users retrieved successfully', new UserCollection($users));
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve users', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to retrieve users', null, [$e->getMessage()], 500);
+        }
+    }
+
+    public function ban($id)
+    {
+        if (Auth::guard('admin')->user() === null) {
+            return $this->errorResponse('Unauthorized', null, ['Only admins can ban users'], 403);
+        }
+        $user = User::find($id);
+        if (!$user) {
+            return $this->errorResponse('User not found', null, ['The specified user ID does not exist'], 404);
+        }
+        if ($user->role === 'admin') {
+            return $this->errorResponse('Cannot ban admin users', null, ['Admin users cannot be banned'], 403);
+        }
+        if ($user->isBanned()) {
+            return $this->errorResponse('User already banned', null, ['This user is already banned'], 400);
+        }
+        try {
+            $user->update(['banned_at' => now()]);
+            Log::info('User banned', ['user_id' => $user->id, 'email' => $user->email, 'banned_by' => Auth::guard('admin')->id()]);
+            return $this->successResponse('User banned successfully', null);
+        } catch (\Exception $e) {
+            Log::error('Failed to ban user', ['user_id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to ban user', null, [$e->getMessage()], 500);
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $user = User::with(['debater', 'coach', 'judge', 'faculty.university'])
+                ->findOrFail($id);
+
+            if ($user) {
+                Log::info('Retrieved user info', [
+                    'user' => $user
+                ]);
+
+                $resource = null;
+                if ($user->debater) {
+                    $resource = new DebaterResource($user->debater);
+                } elseif ($user->coach) {
+                    $resource = new CoachResource($user->coach);
+                } elseif ($user->judge) {
+                    $resource = new JudgeResource($user->judge);
+                } else {
+                    $resource = new MobileUserResource($user);
+                }
+
+                return $this->successResponse("User info:", $resource);
+            }
+            return $this->errorResponse('User not found', '', [], 404);
+        } catch (\Exception $e) {
+            Log::error('Failed to find user', ['user_id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to find user', null, [$e->getMessage()], 500);
+        }
+    }
+    
 }
