@@ -14,6 +14,7 @@ use App\Http\Resources\CoachResource;
 use App\Http\Resources\DebaterResource;
 use App\Http\Resources\JudgeResource;
 use App\Http\Resources\MobileUserResource;
+use App\Http\Resources\UserCollection;
 use App\JSONResponseTrait;
 use App\Models\Admin;
 use App\Models\Coach;
@@ -394,6 +395,17 @@ class AuthController extends Controller
             if (Auth::guard('user')->attempt(['email' => $email, 'password' => $password])) {
                 Log::debug('User guard authentication successful', ['email' => $email]);
                 $user = Auth::guard('user')->user();
+
+                if ($user && $user->isBanned()) {
+                    Log::warning('Banned user attempted access', [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                    ]);
+                    return response()->json([
+                        'message' => 'Your account is banned',
+                        'errors' => ['You are not allowed to access this resource'],
+                    ], 403);
+                }
                 [$actor, $actorResource] = $this->getAuthenticatedActor($user->id);
                 Log::debug('Actor determined', ['actor' => $actor, 'user_id' => $user->id]);
                 if (!$actorResource) {
@@ -737,4 +749,78 @@ class AuthController extends Controller
         $value = $request->get('number') + 5;
         return $this->successResponse("Test response", [$value, $string]);
     }
+
+    public function index()
+    {
+        try {
+            $users = User::with(['debater', 'coach', 'judge', 'faculty.university'])
+                ->get();
+
+            Log::info('Retrieved non-admin users', [
+                'count' => $users->count(),
+            ]);
+
+            return $this->successResponse('Users retrieved successfully', new UserCollection($users));
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve users', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to retrieve users', null, [$e->getMessage()], 500);
+        }
+    }
+
+    public function ban($id)
+    {
+        if (Auth::guard('admin')->user() === null) {
+            return $this->errorResponse('Unauthorized', null, ['Only admins can ban users'], 403);
+        }
+        $user = User::find($id);
+        if (!$user) {
+            return $this->errorResponse('User not found', null, ['The specified user ID does not exist'], 404);
+        }
+        if ($user->role === 'admin') {
+            return $this->errorResponse('Cannot ban admin users', null, ['Admin users cannot be banned'], 403);
+        }
+        if ($user->isBanned()) {
+            return $this->errorResponse('User already banned', null, ['This user is already banned'], 400);
+        }
+        try {
+            $user->update(['banned_at' => now()]);
+            Log::info('User banned', ['user_id' => $user->id, 'email' => $user->email, 'banned_by' => Auth::guard('admin')->id()]);
+            return $this->successResponse('User banned successfully', null);
+        } catch (\Exception $e) {
+            Log::error('Failed to ban user', ['user_id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to ban user', null, [$e->getMessage()], 500);
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $user = User::with(['debater', 'coach', 'judge', 'faculty.university'])
+                ->findOrFail($id);
+
+            if ($user) {
+                Log::info('Retrieved user info', [
+                    'user' => $user
+                ]);
+
+                $resource = null;
+                if ($user->debater) {
+                    $resource = new DebaterResource($user->debater);
+                } elseif ($user->coach) {
+                    $resource = new CoachResource($user->coach);
+                } elseif ($user->judge) {
+                    $resource = new JudgeResource($user->judge);
+                } else {
+                    $resource = new MobileUserResource($user);
+                }
+
+                return $this->successResponse("User info:", $resource);
+            }
+            return $this->errorResponse('User not found', '', [], 404);
+        } catch (\Exception $e) {
+            Log::error('Failed to find user', ['user_id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorResponse('Failed to find user', null, [$e->getMessage()], 500);
+        }
+    }
+    
 }

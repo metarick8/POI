@@ -22,12 +22,12 @@ class ApplicationController extends Controller
         $this->applicationService = $applicationService;
     }
 
-    public function applyDebater(ApplyDebaterRequest $request)
+    public function applyDebater(Debate $debate)
     {
-        return 1;
-        $debate = Debate::findOrFail($request->debate_id);
-        $result = $this->applicationService->requestDebater($debate);
 
+         //$debate = Debate::findOrFail($request->debate_id); //no need for debate id from request
+
+        $result = $this->applicationService->requestDebater($debate);
         if ($result instanceof Application) {
             return $this->successResponse('Debater application submitted', $result);
         }

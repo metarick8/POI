@@ -12,6 +12,7 @@ class JudgeResource extends JsonResource
         return [
             'profile' => [
                 'id' => $this->id,
+                'user_id' => $this->user->id,
                 'first_name' => $this->user->first_name,
                 'last_name' => $this->user->last_name,
                 'email' => $this->user->email,
@@ -22,6 +23,7 @@ class JudgeResource extends JsonResource
                 'education_degree' => $this->user->education_degree,
                 'faculty' => $this->user->faculty?->name,
                 'university' => $this->user->faculty?->university?->name,
+                'account' => $this->user->isBanned() ? 'banned' : 'active',
             ],
             'debates' => 'games',
             'guard' => 'judge'

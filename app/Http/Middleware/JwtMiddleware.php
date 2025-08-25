@@ -39,7 +39,7 @@ class JwtMiddleware
                     'guard' => $guard,
                     'payload' => $payload->toArray()
                 ]);
-
+                
                 // Attempt to authenticate using the guard's provider
                 $user = Auth::guard($guard)->user();
                 if (!$user) {

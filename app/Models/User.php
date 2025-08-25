@@ -25,6 +25,7 @@ class User extends Authenticatable implements JWTSubject
         'education_degree',
         'birth_date',
         'role', // admin, user
+        'banned_at'
     ];
 
     protected $hidden = [
@@ -38,6 +39,8 @@ class User extends Authenticatable implements JWTSubject
             'birth_date' => 'date',
             'education_degree' => 'string',
             'role' => 'string',
+            'password' => 'hashed',
+            'banned_at' => 'datetime',
         ];
     }
 
@@ -50,7 +53,14 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'role' => $this->role,
+            'guard' => 'user',
+            'banned_at' => $this->banned_at?->toDateTimeString()
         ];
+    }
+
+    public function isBanned(): bool
+    {
+        return !is_null($this->banned_at);
     }
 
     public function debater()

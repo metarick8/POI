@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CoachResource;
+use App\JSONResponseTrait;
 use App\Models\Coach;
 use App\Models\Debater;
 use App\Models\Judge;
@@ -13,6 +15,8 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class CoachController extends Controller
 {
+    use JSONResponseTrait;
+
         public function profile()
         {
             $guard = $this->detectGuard();
@@ -33,6 +37,13 @@ class CoachController extends Controller
             }
 
             return 'user';
+        }
+
+        public function index()
+        {
+            $coaches = Coach::with('user')->get();
+            
+            return $this->successResponse("coach list:", CoachResource::collection($coaches));
         }
 
 }

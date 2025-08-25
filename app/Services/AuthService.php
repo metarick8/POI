@@ -140,4 +140,9 @@ class AuthService
             return $t;
         }
     }
+
+    public function index()
+    {
+        
+    }
 }

@@ -11,9 +11,11 @@ use App\Http\Controllers\MotionController;
 use App\Http\Controllers\SubClassificationController;
 use App\Http\Middleware\JwtMiddleware;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
 use App\Http\Controllers\LiveController;
 use App\Http\Controllers\UniversityController;
+use App\Http\Middleware\Auth\AuthenticateAdmin;
+use App\Http\Middleware\Auth\AuthenticateDebater;
+use App\Http\Middleware\Auth\AuthenticateJudge;
 
 Route::controller(AuthController::class)->group(function () {
     Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach|admin');
@@ -23,6 +25,8 @@ Route::controller(AuthController::class)->group(function () {
     Route::get('profile', 'profile')->middleware(JwtMiddleware::class);
     Route::post('upload/image', 'uploadImage');
     Route::delete('destroy/image', 'destroyImage');
+    Route::get('user/ban/{userId}', 'ban');
+    Route::get('user/index', 'index');
 });
 
 Route::get('universities/list', [UniversityController::class, 'list']);
@@ -37,8 +41,9 @@ Route::get('data/education', [FacultyController::class, 'index']);
 Route::post('register-application/debates/{debate}',[ApplicationController::class,'request']);
 
 Route::post('/debates/{debate}/participate',[DebaterController::class,'participate']);
-//admin
-    //this one needs to be changed alot
+Route::get('/coach/index',[CoachController::class,'index']);
+
+
 Route::post('/debates/{debate}/assign-teams', [AdminController::class, 'assignTeams']);
 
 Route::controller(LiveController::class)->group(function () {
@@ -53,17 +58,18 @@ Route::get('this/test', function (){
 Route::get('debate/apply/{debateId}', [ApplicationController::class, 'apply']);
 Route::post('test', [AuthController::class, 'test']);
 
-
 Route::prefix('debates')->middleware(JwtMiddleware::class)->group(function () {
     Route::get('/', [DebateController::class, 'index']);
     Route::get('{debate}', [DebateController::class, 'show']);
     Route::post('/', [DebateController::class, 'create'])->middleware('auth.admin');
-    Route::post('{debate}/apply-debater', [ApplicationController::class, 'applyDebater']);
-    Route::post('{debate}/apply-judge', [ApplicationController::class, 'applyJudge']);
-    Route::post('applications/respond', [ApplicationController::class, 'respond'])->middleware('role:admin');
     Route::patch('{debate}/status', [DebateController::class, 'updateStatus'])->middleware('role:admin');
     Route::patch('{debate}/cancel', [DebateController::class, 'cancel'])->middleware('role:admin');
     Route::patch('{debate}/bugged', [DebateController::class, 'markAsBugged'])->middleware('role:admin');
     Route::patch('{debate}/finish', [DebateController::class, 'finish'])->middleware('role:admin');
-
 });
+
+Route::post('applications/respond', [ApplicationController::class, 'respond'])->middleware(AuthenticateAdmin::class);
+Route::post('debates/{debate}/apply-judge', [ApplicationController::class, 'applyJudge'])->middleware(AuthenticateJudge::class);
+Route::post('debates/{debate}/apply-debater', [ApplicationController::class, 'applyDebater'])->middleware(AuthenticateDebater::class);
+Route::get('user/{userId}', [AuthController::class, 'show'])->middleware(AuthenticateAdmin::class);
+

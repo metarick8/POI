@@ -21,6 +21,9 @@ class MobileUserResource extends JsonResource
             'education_degree' => $this->education_degree, // Added new attribute
             'faculty' => $this->faculty?->name,
             'university' => $this->faculty?->university?->name,
+            'account' => $this->isBanned() ? 'banned' : 'active',
+
+
         ];
     }
 }
