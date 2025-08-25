@@ -47,7 +47,7 @@ Route::post('test', [AuthController::class, 'test']);
 // Admin routes
 Route::middleware([AuthenticateAdmin::class])->group(function () {
     Route::get('debates/applications', [ApplicationController::class, 'index']); // Changed to GET and moved here
-    Route::post('debates/{debate}/application/{application}/respond', [ApplicationController::class, 'respond']);
+    Route::post('debates/applications/respond', [ApplicationController::class, 'respond']);
 });
 
 // Debate-related routes

@@ -39,7 +39,7 @@ class Debate extends Model
 
     public function panelistJudges()
     {
-        return $this->hasMany(Participants_panelist_judge::class);
+        return $this->hasMany(Participants_panelist_judge::class, 'debate_id', 'id');
     }
 
     public function applications()
