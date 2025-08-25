@@ -15,6 +15,10 @@ class ApplicationService
 {
     use JSONResponseTrait;
 
+    public function index()
+    {
+        return $applications = Application::with(['user.debater', 'user.judge', 'debate'])->where('status', 'pending')->get();
+    }
     public function requestDebater(Debate $debate)
     {
         $user = Auth::user();

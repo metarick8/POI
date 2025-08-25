@@ -34,7 +34,7 @@ class Debate extends Model
 
     public function chairJudge()
     {
-        return $this->belongsTo(Judge::class, 'chair_judge_id');
+        return $this->belongsTo(Judge::class, 'chair_judge_id', 'id');
     }
 
     public function panelistJudges()
@@ -44,7 +44,7 @@ class Debate extends Model
 
     public function applications()
     {
-        return $this->hasMany(Application::class);
+        return $this->hasMany(Application::class, 'debate_id', 'id');
     }
 
     public function debaters()

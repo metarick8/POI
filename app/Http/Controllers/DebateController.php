@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DebateInitializeRequest;
+use App\Http\Requests\DebateResultRequest;
 use App\Http\Requests\ListDebatesRequest;
 use App\Http\Resources\DebateResource;
 use App\JSONResponseTrait;
@@ -143,5 +144,10 @@ class DebateController extends Controller
     //     } catch (\Throwable $t) {
     //         return $this->errorResponse("Something went wrong!", $t->getMessage());
     //     }
+    // }
+
+    // public function result(DebateResultRequest $request ,Debate $debate)
+    // {
+    //     //here's the logic
     // }
 }
