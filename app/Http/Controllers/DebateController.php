@@ -59,7 +59,11 @@ class DebateController extends Controller
         return $this->successResponse('Debates retrieved successfully', DebateResource::collection($debates));
     }
 
-
+    public function indexForAdmin()
+    {
+        $debates = $this->debateService->index();
+        return $this->successResponse("list of debates:", DebateResource::collection($debates));
+    }
     public function show(Debate $debate)
     {
         $debate->load([
@@ -131,7 +135,7 @@ class DebateController extends Controller
         return $this->successResponse('Debate finished successfully', new DebateResource($result));
     }
 
-    
+
     // public function toDebatePreparationStatus(debatePreparationRequest $request)
     // {
 

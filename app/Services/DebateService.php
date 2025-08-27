@@ -20,7 +20,10 @@ class DebateService
         }
         return $query->paginate($perPage);
     }
-
+    public function indexForAdmin()
+    {
+        Debate::with(['motion', 'chairJudge']);
+    }
     public function create($request)
     {
         DB::beginTransaction();

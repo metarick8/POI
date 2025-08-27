@@ -55,7 +55,7 @@ Route::middleware([AuthenticateAdmin::class])->group(function () {
 
 // Debate-related routes
 Route::prefix('debates')->group(function () {
-    Route::get('/', [DebateController::class, 'index']);
+    Route::get('/', [DebateController::class, 'indexForAdmin'])->middleware(AuthenticateAdmin::class);
     Route::post('/', [DebateController::class, 'create'])->middleware(AuthenticateAdmin::class);
     Route::get('{debate}', [DebateController::class, 'show']);
     Route::post('{debate}/applications/apply-judge', [ApplicationController::class, 'applyJudge'])->middleware(AuthenticateJudge::class);
