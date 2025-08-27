@@ -3,13 +3,15 @@
 namespace App\Services;
 
 use App\Models\Debate;
+use App\Models\ParticipantsDebater;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class DebateService
 {
-    public function index(array $status = [],$perPage=4)
+    public function index(array $status = [], $perPage = 4)
     {
         $query = Debate::with(['motion', 'chairJudge']);
 

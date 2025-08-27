@@ -74,12 +74,11 @@ class ApplicationController extends Controller
     public function respond(ResponseToDebateRequest $request)
     {
         $application = Application::findOrFail($request->application_id);
+        return Debate::find($application->debate_id);
         return $result = $this->applicationService->respond($request, $application);
-
         if ($result instanceof Application) {
             return $this->successResponse("Application {$request->response}", $result);
         }
-
         return $result;
     }
 }

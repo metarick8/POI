@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\Debate\ApplicationController;
+use App\Http\Controllers\Debate\TeamController;
 use App\Http\Controllers\DebateController;
 use App\Http\Controllers\DebaterController;
 use App\Http\Controllers\FacultyController;
@@ -18,7 +19,7 @@ use App\Http\Middleware\Auth\AuthenticateJudge;
 use Illuminate\Support\Facades\Route;
 
 Route::controller(AuthController::class)->group(function () {
-    Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach|admin');
+    Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach')->middleware(AuthenticateAdmin::class);
     Route::post('login', 'login');
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
@@ -48,6 +49,8 @@ Route::post('test', [AuthController::class, 'test']);
 Route::middleware([AuthenticateAdmin::class])->group(function () {
     Route::get('debates/applications', [ApplicationController::class, 'index']); // Changed to GET and moved here
     Route::post('debates/applications/respond', [ApplicationController::class, 'respond']);
+    Route::post('debates/applications/teams', [TeamController::class, 'selectTeams']);
+    Route::get('debates/{debate}/teams/index', [TeamController::class, 'listTeams']);
 });
 
 // Debate-related routes

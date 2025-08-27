@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DebateInitializeRequest;
+use App\Http\Requests\debatePreparationRequest;
 use App\Http\Requests\DebateResultRequest;
 use App\Http\Requests\ListDebatesRequest;
+use App\Http\Requests\selectTeamsRequest;
 use App\Http\Resources\DebateResource;
 use App\JSONResponseTrait;
 use App\Models\Debate;
@@ -128,15 +130,20 @@ class DebateController extends Controller
 
         return $this->successResponse('Debate finished successfully', new DebateResource($result));
     }
-    public function toDebatePreparationStatus(Debate $debate) {
-        if($debate->status==='playersConfirmed')
-        {
-            $debate->update(['status'=>'debatePreperation']);
-            return $this->successResponse('Debate Status changed successfully!',$debate);
-        } else {
-            return $this->errorResponse("Current Debate Status isn't (playersConfirmed)",403);
-        }
-    }
+
+    
+    // public function toDebatePreparationStatus(debatePreparationRequest $request)
+    // {
+
+    //     if($debate->status==='playersConfirmed')
+    //     {
+
+    //         $debate->update(['status'=>'debatePreperation']);
+    //         return $this->successResponse('Debate Status changed successfully!',$debate);
+    //     } else {
+    //         return $this->errorResponse("Current Debate Status isn't (playersConfirmed)",403);
+    //     }
+    // }
     // public function index() {
     //             try {
     //         $debates = $this->debateService->index();
@@ -146,8 +153,5 @@ class DebateController extends Controller
     //     }
     // }
 
-    // public function result(DebateResultRequest $request ,Debate $debate)
-    // {
-    //     //here's the logic
-    // }
+    public function result(DebateResultRequest $request, Debate $debate) {}
 }
