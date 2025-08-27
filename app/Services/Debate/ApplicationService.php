@@ -10,11 +10,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 use App\JSONResponseTrait;
+use App\Models\Participants_panelist_judge;
 
 class ApplicationService
 {
     use JSONResponseTrait;
 
+    public function index()
+    {
+        return $applications = Application::with(['user.debater', 'user.judge', 'debate'])->where('status', 'pending')->get();
+    }
     public function requestDebater(Debate $debate)
     {
         $user = Auth::user();
@@ -93,25 +98,19 @@ class ApplicationService
 
     public function respond(ResponseToDebateRequest $request, Application $application)
     {
-        $user = Auth::user();
-        if (!$user || !$user->can('manageApplications')) {
-            return $this->errorResponse('Unauthorized to manage applications', '', ['Unauthorized'], 403);
-        }
-
         DB::beginTransaction();
         try {
             $debate = $application->debate;
             $isJudge = in_array($application->type, ['chair_judge', 'panelist_judge']);
-
             if ($request->response === 'approved') {
                 if ($application->type === 'debater' && $debate->debater_count >= 8) {
-                    return $this->errorResponse('Max debaters reached', '', ['Max debaters reached'], 403);
+                    return $this->errorResponse('Max debaters reached', null, ['Max debaters reached'], 403);
                 }
                 if ($isJudge && $debate->judge_count >= 3) {
-                    return $this->errorResponse('Max judges reached', '', ['Max judges reached'], 403);
+                    return $this->errorResponse('Max judges reached', null, ['Max judges reached'], 403);
                 }
                 if ($application->type === 'chair_judge' && $debate->chair_judge_id !== null) {
-                    return $this->errorResponse('Chair judge already assigned', '', ['Chair judge already assigned'], 403);
+                    return $this->errorResponse('Chair judge already assigned', null, ['Chair judge already assigned'], 403);
                 }
 
                 $application->update(['status' => 'approved', 'updated_at' => now()]);
@@ -121,11 +120,25 @@ class ApplicationService
                 } elseif ($isJudge) {
                     $debate->update(['judge_count' => $debate->judge_count + 1, 'updated_at' => now()]);
                     if ($application->type === 'chair_judge') {
-                        $debate->update(['chair_judge_id' => $application->user_id, 'updated_at' => now()]);
+                        $judge = $application->user->judge;
+                        if (!$judge) {
+                            throw new \Exception('No judge record found for user');
+                        }
+                        $debate->update(['chair_judge_id' => $judge->id, 'updated_at' => now()]);
                     } else {
-                        $debate->panelistJudges()->create([
-                            'judge_id' => $application->user_id,
-                            'created_at' => now(),
+                        $judge = $application->user->judge;
+                        if (!$judge) {
+                            throw new \Exception('No judge record found for user');
+                        }
+                        // $debate->panelistJudges()->create([
+                        //     'judge_id' => $judge->id,
+                        //     'debate_id' => $debate->id,
+                        //     'created_at' => now(),
+                        // ]);
+                        Participants_panelist_judge::create([
+                            'judge_id' => $judge->id,
+                            'debate_id' => $debate->id,
+                            'created_at' => now()
                         ]);
                     }
                 }
@@ -143,12 +156,14 @@ class ApplicationService
 
             DB::commit();
             return $application;
-        } catch (Throwable $t) {
+        } catch (\Throwable $t) {
             DB::rollBack();
-            Log::error("Failed to process application {$application->id}: {$t->getMessage()}");
-            return $this->errorResponse('Failed to process application', '', [$t->getMessage()], 500);
+            Log::error("Failed to process application {$application->id}: {$t->getMessage()}", [
+                'user_id' => $application->user_id,
+                'debate_id' => $application->debate_id,
+                'type' => $application->type,
+            ]);
+            return $this->errorResponse('Failed to process application', null, [$t->getMessage()], 500);
         }
     }
 }
-
-

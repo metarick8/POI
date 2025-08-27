@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Panelist_judge extends Model
+class Participants_panelist_judge extends Model
 {
+    protected $table = 'panelist_judges';
     protected $fillable = [
         'debate_id',
         'judge_id'
