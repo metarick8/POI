@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\MotionRequest;
 use App\Http\Resources\MotionResource;
 use App\JSONResponseTrait;
+use App\Models\Motion;
 use App\Services\MotionService;
 use Illuminate\Support\Facades\Request;
 
@@ -35,22 +36,21 @@ class MotionController extends Controller
 
     public function create(MotionRequest $request)
     {
-        $created = $this->motionService->create($request);
-        if ($created)
-            return $this->successResponse("Motion created successfully!", '');
+        $result = $this->motionService->create($request);
+        if ($result instanceof \App\Models\Motion)
+            return $this->successResponse('Motion created successfully!', $result, 201);
+
+        return $this->errorResponse('Failed to create motion', null, [$result->getMessage()], 422);
     }
 
-    public function update(MotionRequest $request)
+    public function delete(Motion $motion)
     {
-        $updated = $this->motionService->patch($request);
-        if ($updated)
-            return $this->successResponse("Motion updated successfully!", '');
-    }
+        $result = $this->motionService->delete($motion);
+        
+        if ($result === true) {
+            return $this->successResponse('Motion deleted successfully!', null);
+        }
 
-    public function delete($motionId)
-    {
-        return $deleted = $this->motionService->delete($motionId);
-        if ($deleted)
-            return $this->successResponse("Motion deleted successfully!", '');
+        return $this->errorResponse('Failed to delete motion', null, ['error' => $result], 422);
     }
 }

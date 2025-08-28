@@ -16,7 +16,8 @@ class DatabaseSeeder extends Seeder
             ColorSeeder::class,
             UniversitySeeder::class,
             TeamSeeder::class,
-            SpeakerSeeder::class
+            SpeakerSeeder::class,
+            AdminSeeder::class
         ]);
     }
 }

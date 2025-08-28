@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\Debate\ApplicationController;
+use App\Http\Controllers\Debate\TeamController;
 use App\Http\Controllers\DebateController;
 use App\Http\Controllers\DebaterController;
 use App\Http\Controllers\FacultyController;
@@ -18,7 +19,7 @@ use App\Http\Middleware\Auth\AuthenticateJudge;
 use Illuminate\Support\Facades\Route;
 
 Route::controller(AuthController::class)->group(function () {
-    Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach|admin');
+    Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach')->middleware(AuthenticateAdmin::class);
     Route::post('login', 'login');
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
@@ -35,8 +36,7 @@ Route::post('documentation')->withoutMiddleware(''); // Verify this route's purp
 Route::get('motion/classification', [SubClassificationController::class, 'index']);
 Route::get('motion/get', [MotionController::class, 'index']);
 Route::post('motion/create', [MotionController::class, 'create']);
-Route::patch('motion/update', [MotionController::class, 'update']);
-Route::delete('motion/delete/{motionId}', [MotionController::class, 'delete']);
+Route::delete('motion/delete/{motion}', [MotionController::class, 'delete']);
 Route::get('data/education', [FacultyController::class, 'index']);
 Route::post('register-application/debates/{debate}', [ApplicationController::class, 'request']);
 Route::get('coach/index', [CoachController::class, 'index']);
@@ -44,19 +44,23 @@ Route::post('debates/{debate}/assign-teams', [AdminController::class, 'assignTea
 Route::get('debate/apply/{debateId}', [ApplicationController::class, 'apply']);
 Route::post('test', [AuthController::class, 'test']);
 
+
 // Admin routes
 Route::middleware([AuthenticateAdmin::class])->group(function () {
     Route::get('debates/applications', [ApplicationController::class, 'index']); // Changed to GET and moved here
     Route::post('debates/applications/respond', [ApplicationController::class, 'respond']);
+    Route::post('debates/applications/teams', [TeamController::class, 'selectTeams']);
+    Route::get('debates/{debate}/teams/index', [TeamController::class, 'listTeams']);
 });
 
 // Debate-related routes
 Route::prefix('debates')->group(function () {
-    Route::get('/', [DebateController::class, 'index']);
+    Route::get('/', [DebateController::class, 'indexForAdmin'])->middleware(AuthenticateAdmin::class);
     Route::post('/', [DebateController::class, 'create'])->middleware(AuthenticateAdmin::class);
     Route::get('{debate}', [DebateController::class, 'show']);
     Route::post('{debate}/applications/apply-judge', [ApplicationController::class, 'applyJudge'])->middleware(AuthenticateJudge::class);
     Route::post('{debate}/applications/apply-debater', [ApplicationController::class, 'applyDebater'])->middleware(AuthenticateDebater::class);
+    Route::post('{debate}/preparation', [DebateController::class, 'preparationStatus']);
     Route::post('{debate}/result', [DebateController::class, 'result']); // Fixed from previous issue
     // Uncomment and adjust these routes as needed
     // Route::patch('{debate}/status', [DebateController::class, 'updateStatus'])->middleware('auth.admin');

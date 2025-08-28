@@ -22,6 +22,7 @@ class ApplicationResource extends JsonResource
             'type' => $this->type, // Changed from 'role' to 'type'
             'status' => $this->status,
             'account_status' => $this->user?->isBanned() ? 'banned' : 'active',
+            'date' => $this->created_at,
         ];
     }
 }

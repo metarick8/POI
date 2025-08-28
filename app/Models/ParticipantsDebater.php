@@ -10,7 +10,8 @@ class ParticipantsDebater extends Model
         'debate_id',
         'debater_id',
         'speaker_id',
-        'rank'
+        'rank',
+        'team_number'
     ];
 
 

@@ -61,13 +61,11 @@ class ApplicationService
     public function requestJudge(Debate $debate, string $judgeType)
     {
         $user = Auth::user();
-        if (!$user) {
+        if (!$user)
             return $this->errorResponse('User not authenticated', '', ['User not authenticated'], 401);
-        }
 
-        if (!$user->can('applyJudge', [$debate, $judgeType])) {
+        if (!$user->can('applyJudge', [$debate, $judgeType]))
             return $this->errorResponse('You cannot apply as a judge', '', ['Unauthorized or max judges reached'], 403);
-        }
 
         DB::beginTransaction();
         try {
@@ -100,45 +98,71 @@ class ApplicationService
     {
         DB::beginTransaction();
         try {
-            $debate = $application->debate;
+            // Lock the debate record to prevent concurrent updates
+            $debate = Debate::where('id', $application->debate_id)->lockForUpdate()->firstOrFail();
             $isJudge = in_array($application->type, ['chair_judge', 'panelist_judge']);
+
             if ($request->response === 'approved') {
+                // Check if approving this debater would exceed the limit
                 if ($application->type === 'debater' && $debate->debater_count >= 8) {
+                    DB::rollBack();
                     return $this->errorResponse('Max debaters reached', null, ['Max debaters reached'], 403);
                 }
                 if ($isJudge && $debate->judge_count >= 3) {
+                    DB::rollBack();
                     return $this->errorResponse('Max judges reached', null, ['Max judges reached'], 403);
                 }
                 if ($application->type === 'chair_judge' && $debate->chair_judge_id !== null) {
+                    DB::rollBack();
                     return $this->errorResponse('Chair judge already assigned', null, ['Chair judge already assigned'], 403);
                 }
+                if ($application->type === 'panelist_judge' && $debate->chair_judge_id === null && $debate->judge_count >= 2) {
+                    DB::rollBack();
+                    return $this->errorResponse('Chair judge not assigned', null, ['Chair judge not assigned'], 403);
+                }
 
+                // Update application status
                 $application->update(['status' => 'approved', 'updated_at' => now()]);
 
                 if ($application->type === 'debater') {
-                    $debate->update(['debater_count' => $debate->debater_count + 1, 'updated_at' => now()]);
+                    // Increment debater_count
+                    $newDebaterCount = $debate->debater_count + 1;
+                    $debate->update(['debater_count' => $newDebaterCount, 'updated_at' => now()]);
+
+                    // Check if conditions are met for playersConfirmed status
+                    if ($newDebaterCount === 8 && $debate->chair_judge_id !== null && $debate->judge_count <= 3) {
+                        $debate->update(['status' => 'playersConfirmed', 'updated_at' => now()]);
+                        Application::where('debate_id', $debate->id)
+                            ->where('status', 'pending')
+                            ->update(['status' => 'rejected', 'updated_at' => now()]);
+                    }
                 } elseif ($isJudge) {
+                    // Increment judge_count
                     $debate->update(['judge_count' => $debate->judge_count + 1, 'updated_at' => now()]);
+
                     if ($application->type === 'chair_judge') {
                         $judge = $application->user->judge;
                         if (!$judge) {
                             throw new \Exception('No judge record found for user');
                         }
                         $debate->update(['chair_judge_id' => $judge->id, 'updated_at' => now()]);
+
+                        // Check if conditions are met for playersConfirmed status
+                        if ($debate->debater_count === 8 && $debate->chair_judge_id !== null && $debate->judge_count <= 3) {
+                            $debate->update(['status' => 'playersConfirmed', 'updated_at' => now()]);
+                            Application::where('debate_id', $debate->id)
+                                ->where('status', 'pending')
+                                ->update(['status' => 'rejected', 'updated_at' => now()]);
+                        }
                     } else {
                         $judge = $application->user->judge;
                         if (!$judge) {
                             throw new \Exception('No judge record found for user');
                         }
-                        // $debate->panelistJudges()->create([
-                        //     'judge_id' => $judge->id,
-                        //     'debate_id' => $debate->id,
-                        //     'created_at' => now(),
-                        // ]);
                         Participants_panelist_judge::create([
                             'judge_id' => $judge->id,
                             'debate_id' => $debate->id,
-                            'created_at' => now()
+                            'created_at' => now(),
                         ]);
                     }
                 }
@@ -165,5 +189,26 @@ class ApplicationService
             ]);
             return $this->errorResponse('Failed to process application', null, [$t->getMessage()], 500);
         }
+    }
+
+    public function isPlayersConfirmedStatusUpdated(Debate $debate): bool
+    {
+        if ($debate->status !== 'announced')
+            return false;
+        if ($debate->debater_count === 8 && $debate->chair_judge_id !== null && $debate->judge_count <= 3) {
+            DB::transaction();
+            try {
+                $debate->update(['status' => 'playersConfirmed', 'updated_at' => now()]);
+                Application::where('debate_id', $debate->id)
+                    ->where('status', 'pending')
+                    ->update(["status" => "rejected"]);
+                DB::commit();
+                return true;
+            } catch (Throwable $t) {
+                DB::rollBack();
+                return false;
+            }
+        }
+        return false;
     }
 }
