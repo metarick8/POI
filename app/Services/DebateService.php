@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Debate;
 use App\Models\ParticipantsDebater;
+use App\Models\Speaker;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -152,6 +154,79 @@ class DebateService
             DB::rollBack();
             Log::error("Failed to finish debate {$debate->id}: {$t->getMessage()}");
             return $t->getMessage();
+        }
+    }
+    public function prepare(Request $request, Debate $debate)
+    {
+        DB::beginTransaction();
+
+        try {
+            Log::info('Attempting to prepare debate', [
+                'debate_id' => $debate->id,
+                'motion_id' => $request->motion_id,
+            ]);
+            
+            $debate->motion_id = $request->motion_id;
+            $debate->save();
+
+            $participants = ParticipantsDebater::where('debate_id', $debate->id)->get();
+
+            if ($participants->isEmpty()) {
+                Log::warning('No participants found for debate', ['debate_id' => $debate->id]);
+                DB::rollBack();
+                return 'No participants found for this debate';
+            }
+
+            $positions = $request->positions;
+            $processedDebaters = [];
+
+            foreach ($positions as $position){
+                $teamId = $position['team_id'];
+                $debaterIds = $position['debater_ids'];
+
+                $speakers = Speaker::where('team_id', $teamId)->get();
+                if ($speakers->count() < 2) {
+                    Log::warning('Insufficient speakers for team', ['team_id' => $teamId, 'speaker_count' => $speakers->count()]);
+                    DB::rollBack();
+                    return 'Insufficient speakers for team ' . $teamId;
+                }
+
+                $speakerIds = $speakers->pluck('id')->take(2)->values();
+                $debater1Id = $debaterIds[0];
+                $debater2Id = $debaterIds[1];
+
+                $participant1 = $participants->where('debater_id', $debater1Id)->where('team_number', $teamId)->first();
+                $participant2 = $participants->where('debater_id', $debater2Id)->where('team_number', $teamId)->first();
+
+                if (!$participant1 || !$participant2) {
+                    Log::warning('Debaters not found in participants for team', ['team_id' => $teamId, 'debater_ids' => $debaterIds]);
+                    DB::rollBack();
+                    return 'One or more debaters not found in participants for team ' . $teamId;
+                }
+
+                $participant1->update(['speaker_id' => $speakerIds[0], 'rank' => 1]);
+                $participant2->update(['speaker_id' => $speakerIds[1], 'rank' => 2]);
+
+                $processedDebaters = array_merge($processedDebaters, [$debater1Id, $debater2Id]);
+            }
+
+            $unprocessedParticipants = $participants->whereNotIn('debater_id', $processedDebaters);
+            if ($unprocessedParticipants->isNotEmpty()) {
+                Log::warning('Unprocessed participants found', ['debate_id' => $debate->id, 'unprocessed_debater_ids' => $unprocessedParticipants->pluck('debater_id')->toArray()]);
+                DB::rollBack();
+                return 'Some participants were not assigned positions';
+            }
+
+            Log::info('Debate preparation completed successfully', ['debate_id' => $debate->id]);
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to prepare debate', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 'Failed to prepare debate due to an unexpected error';
         }
     }
 }

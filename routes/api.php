@@ -8,10 +8,13 @@ use App\Http\Controllers\Debate\TeamController;
 use App\Http\Controllers\DebateController;
 use App\Http\Controllers\DebaterController;
 use App\Http\Controllers\FacultyController;
+use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\JudgeController;
 use App\Http\Controllers\MotionController;
 use App\Http\Controllers\SubClassificationController;
 use App\Http\Middleware\JwtMiddleware;
 use App\Http\Controllers\LiveController;
+use App\Http\Controllers\RateController;
 use App\Http\Controllers\UniversityController;
 use App\Http\Middleware\Auth\AuthenticateAdmin;
 use App\Http\Middleware\Auth\AuthenticateDebater;
@@ -51,8 +54,9 @@ Route::middleware([AuthenticateAdmin::class])->group(function () {
     Route::post('debates/applications/respond', [ApplicationController::class, 'respond']);
     Route::post('debates/applications/teams', [TeamController::class, 'selectTeams']);
     Route::get('debates/{debate}/teams/index', [TeamController::class, 'listTeams']);
+    Route::get('getJudgeRates/{judge_id}', [JudgeController::class, 'getJudgeRates']);
+    Route::get('getJudgeRatesByDebate/{debateId}', [JudgeController::class, 'getJudgeRatesByDebate']);
 });
-
 // Debate-related routes
 Route::prefix('debates')->group(function () {
     Route::get('/', [DebateController::class, 'indexForAdmin'])->middleware(AuthenticateAdmin::class);
@@ -60,7 +64,7 @@ Route::prefix('debates')->group(function () {
     Route::get('{debate}', [DebateController::class, 'show']);
     Route::post('{debate}/applications/apply-judge', [ApplicationController::class, 'applyJudge'])->middleware(AuthenticateJudge::class);
     Route::post('{debate}/applications/apply-debater', [ApplicationController::class, 'applyDebater'])->middleware(AuthenticateDebater::class);
-    Route::post('{debate}/preparation', [DebateController::class, 'preparationStatus']);
+    Route::put('{debate}/preparation', [DebateController::class, 'preparationStatus']);
     Route::post('{debate}/result', [DebateController::class, 'result']); // Fixed from previous issue
     // Uncomment and adjust these routes as needed
     // Route::patch('{debate}/status', [DebateController::class, 'updateStatus'])->middleware('auth.admin');
@@ -68,6 +72,11 @@ Route::prefix('debates')->group(function () {
     // Route::patch('{debate}/bugged', [DebateController::class, 'markAsBugged'])->middleware('auth.admin');
     // Route::patch('{debate}/finish', [DebateController::class, 'finish'])->middleware('auth.admin');
 });
+///from leen
+
+Route::post('rate_judge', [RateController::class, 'rateJudge']);
+Route::post('addfeedback', [FeedbackController::class, 'addFeedback']);
+Route::get('getFeedbacks/{debate}', [FeedbackController::class, 'getFeedbacks']);
 
 Route::controller(LiveController::class)->group(function () {
     Route::get('live/test', 'testing');

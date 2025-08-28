@@ -13,7 +13,7 @@ class Team extends Model
 
     public function participants()
     {
-        return $this->hasMany(Participants_debater::class, 'team_id', 'id');
+        return $this->hasMany(ParticipantsDebater::class, 'team_id', 'id');
     }
 
 

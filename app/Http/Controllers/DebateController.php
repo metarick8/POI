@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DebateInitializeRequest;
-use App\Http\Requests\debatePreparationRequest;
+use App\Http\Requests\DebatePreparationRequest;
 use App\Http\Requests\DebateResultRequest;
 use App\Http\Requests\ListDebatesRequest;
 use App\Http\Requests\preparationStatusRequest;
@@ -159,8 +159,13 @@ class DebateController extends Controller
 
     public function result(DebateResultRequest $request, Debate $debate) {}
 
-    public function preparationStatus(preparationStatusRequest $request)
+    public function preparationStatus(DebatePreparationRequest $request, Debate $debate)
     {
-        
+        $result = $this->debateService->prepare($request, $debate);
+        if ($result === true) {
+            return $this->successResponse('Debate preparation completed successfully!', null);
+        }
+
+        return $this->errorResponse('Failed to prepare debate', null, ['error' => $result], 422);
     }
 }

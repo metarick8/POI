@@ -19,4 +19,8 @@ class ParticipantsDebater extends Model
     {
         return $this->hasOne(Feedback::class, 'participant_debater_id', 'id');
     }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }
