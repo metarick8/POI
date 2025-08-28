@@ -2,14 +2,33 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Debater extends Model
+class Debater extends Authenticatable implements JWTSubject
 {
+    use HasFactory;
     protected $fillable = [
         'user_id',
         'coach_id',
     ];
+
+        /**
+     * Get the identifier for JWT.
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key value array, containing any custom claims.
+     */
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 
     public function user()
     {
