@@ -13,21 +13,10 @@ class MotionRequest extends FormRequest
 
     public function rules(): array
     {
-        $rules = [
-            'sentence' => ['string'],
-            'sub_classifications' => ['array'],
+         return [
+            'sentence' => ['string', 'required'],
+            'sub_classifications' => ['array', 'required'],
             'sub_classifications.*' => ['distinct', 'exists:sub_classifications,id']
         ];
-
-        if ($this->method() === 'POST') {
-            $rules['sentence'][] = 'required';
-            $rules['sub_classifications'][] = 'required';
-        }
-
-        elseif ($this->method() === 'PATCH') {
-            $rules['motion_id'] = ['required', 'exists:motions,id'];
-        }
-
-        return $rules;
     }
 }

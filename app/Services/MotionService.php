@@ -6,7 +6,9 @@ use App\Models\Motion;
 use App\Models\Motion_sub_classification;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class MotionService
@@ -26,91 +28,78 @@ class MotionService
         }
     }
 
-    public function create($request)
+    public function create(Request $request): Motion|Throwable
     {
         DB::beginTransaction();
         try {
             $motion = Motion::create([
-                "sentence" => $request->get('sentence')
+                'sentence' => $request->get('sentence'),
             ]);
 
-            foreach ($request->get('sub_classifications') as $subClassificationId) {
-                Motion_sub_classification::create([
+            // Manually insert pivot records without created_at
+            $pivotData = array_map(function ($subClassificationId) use ($motion) {
+                return [
                     'motion_id' => $motion->id,
-                    'sub_classification_id' => $subClassificationId
-                ]);
-            }
+                    'sub_classification_id' => $subClassificationId,
+                ];
+            }, $request->get('sub_classifications'));
+
+            DB::table('motion_sub_classifications')->insert($pivotData);
 
             DB::commit();
-            return true;
+            return $motion;
         } catch (Throwable $t) {
             DB::rollBack();
-            return $t->getMessage();
+            return $t;
         }
     }
 
-    public function patch($request)
+    public function delete(Motion $motion)
     {
         DB::beginTransaction();
-        try {
 
-            $motion = Motion::findOrFail($request->get("motion_id"));
+        // Log the attempt to delete the motion
+        Log::info('Attempting to delete motion', [
+            'motion_id' => $motion->id,
+            'sentence' => $motion->sentence,
+            'exists' => $motion->exists,
+        ]);
+        
+        $debates = $motion->debates()->get();
 
-            if ($request->has('sentence')) {
-                $motion->sentence = $request->get('sentence');
-                $motion->touch();
-                $motion->save();
-            }
-
-            if ($request->has('sub_classifications')) {
-                $motion->sub_classifications()->detach();
-
-                foreach ($request->get('sub_classifications') as $subClassificationId) {
-                    $motion->sub_classifications()->attach($subClassificationId);
-                }
-                $motion->touch();
-            }
-
-            DB::commit();
-            return true;
-        } catch (Throwable $t) {
+        if ($debates->isNotEmpty()) {
+            Log::warning('Motion deletion prevented due to associated debates', [
+                'motion_id' => $motion->id,
+                'debate_count' => $debates->count(),
+                'debate_ids' => $debates->pluck('id')->toArray(),
+            ]);
             DB::rollBack();
-            return $t->getMessage();
+            return 'Cannot delete motion with associated debates';
         }
-    }
 
-    public function delete($motionId)
-    {
-        DB::beginTransaction();
-        try {
-            $motion = Motion::findOrFail($motionId);
-            $debates = $motion->debates()->get();
+        $detached = $motion->sub_classifications()->detach();
+        Log::info('Detached sub_classifications from motion', [
+            'motion_id' => $motion->id,
+            'detached_count' => $detached,
+        ]);
 
-            if ($debates->isEmpty()) {
-                $motion->delete();
-            } else {
-                $canDelete = true;
-                foreach ($debates as $debate) {
-                    if ($debate->start_date === null || Carbon::parse($debate->start_date)->gt(now()->addDay())) {
-                        continue;
-                    }
-                    $canDelete = false;
-                    break;
-                }
+        $success = $motion->delete();
 
-                if ($canDelete) {
-                    //$debate->delete();
-                    $motion->delete();
-                } else {
-                    throw new Exception('Cannot delete motion as it has started debates');
-                }
-            }
-
-            DB::commit();
-            return true;
-        } catch (Throwable $t) {
+        if (!$success) {
+            Log::error('Failed to delete motion', [
+                'motion_id' => $motion->id,
+                'exists' => $motion->exists,
+                'error' => 'Motion deletion failed, possibly due to database constraints or model state',
+            ]);
             DB::rollBack();
-            return $t->getMessage();
+            return 'Motion deletion failed';
         }
+
+        Log::info('Motion deleted successfully', [
+            'motion_id' => $motion->id,
+        ]);
+
+        DB::commit();
+        return true;
     }
 }

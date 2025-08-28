@@ -6,6 +6,7 @@ use App\Http\Requests\DebateInitializeRequest;
 use App\Http\Requests\debatePreparationRequest;
 use App\Http\Requests\DebateResultRequest;
 use App\Http\Requests\ListDebatesRequest;
+use App\Http\Requests\preparationStatusRequest;
 use App\Http\Requests\selectTeamsRequest;
 use App\Http\Resources\DebateResource;
 use App\JSONResponseTrait;
@@ -58,10 +59,9 @@ class DebateController extends Controller
         });
         return $this->successResponse('Debates retrieved successfully', DebateResource::collection($debates));
     }
-
     public function indexForAdmin()
     {
-        $debates = $this->debateService->index();
+        $debates = $this->debateService->indexForAdmin();
         return $this->successResponse("list of debates:", DebateResource::collection($debates));
     }
     public function show(Debate $debate)
@@ -158,4 +158,9 @@ class DebateController extends Controller
     // }
 
     public function result(DebateResultRequest $request, Debate $debate) {}
+
+    public function preparationStatus(preparationStatusRequest $request)
+    {
+        
+    }
 }

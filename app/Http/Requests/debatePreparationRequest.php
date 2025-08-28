@@ -14,7 +14,7 @@ class debatePreparationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "motion_id" => [],
+            "motion_id" => ['required', 'exists:motions,id'],
             "postion"
         ];
     }

@@ -22,7 +22,7 @@ class DebateService
     }
     public function indexForAdmin()
     {
-        Debate::with(['motion', 'chairJudge']);
+        return Debate::with(['motion', 'chairJudge'])->get();
     }
     public function create($request)
     {
