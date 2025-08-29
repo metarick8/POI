@@ -14,6 +14,6 @@ class Feedback extends Model
 
     public function participant()
     {
-        return $this->belongsTo(Participants_debater::class, 'participant_debater_id', 'id');
+        return $this->belongsTo(ParticipantsDebater::class, 'participant_debater_id', 'id');
     }
 }
