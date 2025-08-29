@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Debate extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'motion_id',
         'chair_judge_id',

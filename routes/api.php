@@ -12,6 +12,7 @@ use App\Http\Controllers\MotionController;
 use App\Http\Controllers\SubClassificationController;
 use App\Http\Middleware\JwtMiddleware;
 use App\Http\Controllers\LiveController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UniversityController;
 use App\Http\Middleware\Auth\AuthenticateAdmin;
 use App\Http\Middleware\Auth\AuthenticateDebater;
@@ -55,6 +56,7 @@ Route::middleware([AuthenticateAdmin::class])->group(function () {
 
 // Debate-related routes
 Route::prefix('debates')->group(function () {
+    Route::get('/list',[DebateController::class,'index'])->middleware(JwtMiddleware::class);
     Route::get('/', [DebateController::class, 'indexForAdmin'])->middleware(AuthenticateAdmin::class);
     Route::post('/', [DebateController::class, 'create'])->middleware(AuthenticateAdmin::class);
     Route::get('{debate}', [DebateController::class, 'show']);
@@ -77,3 +79,6 @@ Route::controller(LiveController::class)->group(function () {
 Route::get('this/test', function () {
     return 'this is test';
 });
+
+//testing notification:
+Route::post('/send-notification', [NotificationController::class, 'sendPushNotification']);

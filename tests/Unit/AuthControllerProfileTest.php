@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class AuthControllerProfileTest extends TestCase
 {
-    use \Illuminate\Foundation\Testing\RefreshDatabase;
+    use \Illuminate\Foundation\Testing\DatabaseTransactions;
 
     protected function setUp(): void
     {
