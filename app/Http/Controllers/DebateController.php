@@ -135,7 +135,6 @@ class DebateController extends Controller
         return $this->successResponse('Debate finished successfully', new DebateResource($result));
     }
 
-
     // public function toDebatePreparationStatus(debatePreparationRequest $request)
     // {
 
