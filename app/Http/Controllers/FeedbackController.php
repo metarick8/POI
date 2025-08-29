@@ -49,15 +49,41 @@ class FeedbackController extends Controller
 
     public function getFeedbacks($debateId)
     {
-        // $feedbacks = Feedback::with('participant.user')
-        //     ->whereHas('participant', function ($q) use ($debateId) {
-        //         $q->where('debate_id', $debateId);
-        //     })->get();
-
         $feedback = Feedback::with('participant')->get();
         return response()->json([
             'debate_id' => $debateId,
             'feedbacks' => $feedback
+        ]);
+    }
+
+    public function getFeedbacksByDebater()
+    {
+        $debater = Auth::guard('debater')->user();
+        if (!$debater) {
+            return response()->json([
+                'error' => 'Unauthenticated or not a debater'
+            ], 401);
+        }
+
+        $debaterId = $debater->id;
+
+        $participants = ParticipantsDebater::where('debater_id', $debaterId)->get();
+
+        if ($participants->isEmpty()) {
+            return response()->json([
+                'message' => 'No participants found for the current debater',
+                'debater_id' => $debaterId,
+                'feedbacks' => []
+            ], 404);
+        }
+
+        $feedbacks = Feedback::with('participant')
+            ->whereIn('participant_debater_id', $participants->pluck('id'))
+            ->get();
+
+        return response()->json([
+            'debater_id' => $debaterId,
+            'feedbacks' => $feedbacks
         ]);
     }
 }

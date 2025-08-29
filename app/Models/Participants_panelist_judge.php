@@ -19,6 +19,6 @@ class Participants_panelist_judge extends Model
 
     public function judge()
     {
-        return $this->belongsTo(Judge::class, 'panelist_judge_id', 'id');
+        return $this->belongsTo(Judge::class, 'judge_id', 'id');
     }
 }

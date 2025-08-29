@@ -30,8 +30,9 @@ class Debater extends Model
     {
         return $this->hasManyThrough(Application::class, User::class, 'id', 'user_id', 'user_id', 'id');
     }
+
     public function participantsDebater()
     {
-        return $this->hasMany(ParticipantsDebater::class, 'user_id', 'user_id');
-    }   
+        return $this->hasMany(ParticipantsDebater::class, 'debater_id', 'id');
+    }
 }
