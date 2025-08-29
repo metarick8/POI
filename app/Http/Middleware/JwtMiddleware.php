@@ -16,7 +16,7 @@ class JwtMiddleware
         Log::debug('JwtMiddleware invoked', ['token' => $request->bearerToken()]);
 
         // List all possible guards
-        $guards = ['user', 'debater', 'judge', 'coach', 'admin'];
+        $guards = ['user', 'debater', 'judge', 'coach'];
 
         foreach ($guards as $guard) {
             Log::debug('Attempting authentication with guard', ['guard' => $guard]);
@@ -39,7 +39,7 @@ class JwtMiddleware
                     'guard' => $guard,
                     'payload' => $payload->toArray()
                 ]);
-                
+
                 // Attempt to authenticate using the guard's provider
                 $user = Auth::guard($guard)->user();
                 if (!$user) {

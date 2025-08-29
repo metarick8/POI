@@ -16,4 +16,5 @@ class Feedback extends Model
     {
         return $this->belongsTo(ParticipantsDebater::class, 'participant_debater_id', 'id');
     }
+
 }

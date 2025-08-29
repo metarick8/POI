@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DebateInitializeRequest;
-use App\Http\Requests\debatePreparationRequest;
+use App\Http\Requests\DebatePreparationRequest;
 use App\Http\Requests\DebateResultRequest;
 use App\Http\Requests\ListDebatesRequest;
 use App\Http\Requests\preparationStatusRequest;
@@ -135,7 +135,6 @@ class DebateController extends Controller
         return $this->successResponse('Debate finished successfully', new DebateResource($result));
     }
 
-
     // public function toDebatePreparationStatus(debatePreparationRequest $request)
     // {
 
@@ -159,8 +158,280 @@ class DebateController extends Controller
 
     public function result(DebateResultRequest $request, Debate $debate) {}
 
-    public function preparationStatus(preparationStatusRequest $request)
+    public function preparationStatus(DebatePreparationRequest $request, Debate $debate)
     {
-        
+        $result = $this->debateService->prepare($request, $debate);
+
+        if ($result['success']) {
+            return $this->successResponse($result['message'], null);
+        }
+
+        return $this->errorResponse('Failed to prepare debate', null, ['error' => $result['error']], 422);
+    }
+
+    /**
+     * Assign teams after players are confirmed (Admin only)
+     */
+    public function assignTeams(Request $request, Debate $debate)
+    {
+        try {
+            $validated = $request->validate([
+                'team_assignments' => 'required|array',
+                'team_assignments.*' => 'required|array|size:2', // Each team must have exactly 2 debaters
+            ]);
+
+            // Ensure we have exactly 4 teams
+            if (count($validated['team_assignments']) !== 4) {
+                return $this->errorResponse(
+                    'Must assign exactly 4 teams',
+                    null,
+                    ['error' => 'Invalid team count'],
+                    422
+                );
+            }
+
+            $result = $this->debateService->assignTeams($debate, $validated['team_assignments']);
+
+            if (!$result['success']) {
+                return $this->errorResponse(
+                    'Failed to assign teams',
+                    null,
+                    ['error' => $result['error']],
+                    422
+                );
+            }
+
+            return $this->successResponse($result['message'], new DebateResource($debate->fresh()));
+
+        } catch (\Exception $e) {
+            Log::error('Error assigning teams', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while assigning teams',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Add panelist judge to debate (Admin only)
+     */
+    public function addPanelistJudge(Request $request, Debate $debate)
+    {
+        try {
+            $validated = $request->validate([
+                'judge_id' => 'required|exists:judges,id'
+            ]);
+
+            $result = $this->debateService->addPanelistJudge($debate, $validated['judge_id']);
+
+            if (!$result['success']) {
+                return $this->errorResponse(
+                    'Failed to add panelist judge',
+                    null,
+                    ['error' => $result['error']],
+                    422
+                );
+            }
+
+            return $this->successResponse($result['message'], null);
+
+        } catch (\Exception $e) {
+            Log::error('Error adding panelist judge', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while adding panelist judge',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Submit debate results (Chair judge only)
+     */
+    public function submitResults(Request $request, Debate $debate)
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            if (!$user) {
+                return $this->errorResponse('Unauthorized', null, ['User not authenticated'], 401);
+            }
+
+            // Check if user is the chair judge
+            if (!$debate->chairJudge || $debate->chairJudge->user_id !== $user->id) {
+                return $this->errorResponse(
+                    'Only the chair judge can submit results',
+                    null,
+                    ['error' => 'Access denied'],
+                    403
+                );
+            }
+
+            $validated = $request->validate([
+                'winner' => 'required|string|max:255',
+                'summary' => 'required|string|max:2000',
+                'ranks' => 'required|array|size:4', // Rankings for 4 teams
+                'ranks.*' => 'required|integer|between:1,4'
+            ]);
+
+            // Validate ranks are unique
+            if (count(array_unique($validated['ranks'])) !== 4) {
+                return $this->errorResponse(
+                    'Team ranks must be unique',
+                    null,
+                    ['error' => 'Invalid rankings'],
+                    422
+                );
+            }
+
+            $result = $this->debateService->submitResults($debate, $validated);
+
+            if (!$result['success']) {
+                return $this->errorResponse(
+                    'Failed to submit results',
+                    null,
+                    ['error' => $result['error']],
+                    422
+                );
+            }
+
+            return $this->successResponse($result['message'], new DebateResource($debate->fresh()));
+
+        } catch (\Exception $e) {
+            Log::error('Error submitting results', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage(),
+                'user_id' => $user->id ?? null
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while submitting results',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Get debate participants with their teams and speaker assignments
+     */
+    public function getParticipants(Debate $debate)
+    {
+        try {
+            $participants = $debate->participantsDebaters()
+                                  ->with([
+                                      'debaterUser:id,name',
+                                      'speaker:id,position,team_id'
+                                  ])
+                                  ->get()
+                                  ->groupBy('team_number');
+
+            return $this->successResponse(
+                'Participants retrieved successfully',
+                $participants
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Error getting participants', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while retrieving participants',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Get debate judges (chair and panelist)
+     */
+    public function getJudges(Debate $debate)
+    {
+        try {
+            $judges = [];
+
+            // Chair judge
+            if ($debate->chairJudge) {
+                $judges['chair'] = [
+                    'judge_id' => $debate->chairJudge->id,
+                    'user_id' => $debate->chairJudge->user_id,
+                    'name' => $debate->chairJudge->user->name ?? null,
+                    'type' => 'chair'
+                ];
+            }
+
+            // Panelist judges
+            $judges['panelists'] = $debate->panelistJudges()
+                                         ->with('judge.user:id,name')
+                                         ->get()
+                                         ->map(function($panelist) {
+                                             return [
+                                                 'judge_id' => $panelist->judge_id,
+                                                 'user_id' => $panelist->judge->user_id ?? null,
+                                                 'name' => $panelist->judge->user->name ?? null,
+                                                 'type' => 'panelist'
+                                             ];
+                                         });
+
+            return $this->successResponse(
+                'Judges retrieved successfully',
+                $judges
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Error getting judges', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while retrieving judges',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Check debates for preparation phase (Cron job endpoint)
+     */
+    public function checkPreparationPhase()
+    {
+        try {
+            $results = $this->debateService->checkDebatesForPreparation();
+
+            return $this->successResponse(
+                'Preparation phase check completed',
+                $results
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Error checking preparation phase', [
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while checking preparation phase',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
     }
 }

@@ -8,6 +8,8 @@ class Judge extends Model
 {
     protected $fillable = [
         'user_id',
+        'zoom_id',
+        'zoom_email',
     ];
 
     public function user()
