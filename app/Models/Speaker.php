@@ -9,7 +9,8 @@ class Speaker extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'position'
+        'team_id',
+        'position',
     ];
 
     public function team()

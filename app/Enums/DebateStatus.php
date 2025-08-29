@@ -6,9 +6,11 @@ enum DebateStatus: string
 {
     case ANNOUNCED = 'announced';
     case PLAYERS_CONFIRMED = 'playersConfirmed';
-    case DEBATE_PREPARATION = 'debatePreperation';
+    case TEAMS_CONFIRMED = 'teamsConfirmed';
+    case DEBATE_PREPARATION = 'debatePreparation';
     case ONGOING = 'ongoing';
     case FINISHED = 'finished';
+    case CANCELLED = 'cancelled';
     case BUGGED = 'bugged';
 
     public static function values(): array

@@ -46,7 +46,7 @@ class MotionController extends Controller
     public function delete(Motion $motion)
     {
         $result = $this->motionService->delete($motion);
-        
+
         if ($result === true) {
             return $this->successResponse('Motion deleted successfully!', null);
         }

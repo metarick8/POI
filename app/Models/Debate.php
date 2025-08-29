@@ -21,12 +21,24 @@ class Debate extends Model
         'cancellation_reason',
         'judge_count',
         'debater_count',
+        'meeting_id',
+        'start_url',
+        'join_url',
+        'password',
+        'recording_type',
+        'zoom_recording_url',
+        'cloudinary_recording_id',
+        'cloudinary_recording_url',
+        'recording_uploaded_at',
+        'final_ranks',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'type' => 'string',
         'status' => 'string',
+        'recording_uploaded_at' => 'datetime',
+        'final_ranks' => 'json',
     ];
 
     public function motion()
@@ -71,5 +83,39 @@ class Debate extends Model
     public function getJudgeCountAttribute()
     {
         return $this->judges()->count();
+    }
+
+    public function getApplicantsCountAttribute()
+    {
+        return $this->applications()->count();
+    }
+
+    public function reports()
+    {
+        return $this->hasMany(Report::class);
+    }
+
+    public function participantsDebaters()
+    {
+        return $this->hasMany(ParticipantsDebater::class, 'debate_id', 'id');
+    }
+
+    public function hasRecording(): bool
+    {
+        return !empty($this->zoom_recording_url) || !empty($this->cloudinary_recording_url);
+    }
+
+    public function isReadyForPreparation(): bool
+    {
+        return $this->status === 'teamsConfirmed' &&
+            $this->participantsDebaters()->count() === 8 &&
+            $this->chair_judge_id !== null;
+    }
+
+    public function canStartZoomMeeting(): bool
+    {
+        return $this->type === 'online' &&
+            $this->status === 'teamsConfirmed' &&
+            empty($this->meeting_id);
     }
 }

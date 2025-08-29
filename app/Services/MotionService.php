@@ -19,12 +19,18 @@ class MotionService
             $motions = Motion::with('sub_classifications')->get();
 
             if ($motions->isEmpty()) {
+                Log::info('No motions found');
                 return collect([]);
             }
 
+            Log::info('Motions retrieved successfully', ['count' => $motions->count()]);
             return $motions;
-        } catch (Throwable $t) {
-            return $t->getMessage();
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve motions', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return false;
         }
     }
 
@@ -64,7 +70,7 @@ class MotionService
             'sentence' => $motion->sentence,
             'exists' => $motion->exists,
         ]);
-        
+
         $debates = $motion->debates()->get();
 
         if ($debates->isNotEmpty()) {
