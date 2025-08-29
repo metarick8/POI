@@ -14,11 +14,8 @@ use App\Http\Controllers\MotionController;
 use App\Http\Controllers\SubClassificationController;
 use App\Http\Middleware\JwtMiddleware;
 use App\Http\Controllers\LiveController;
-<<<<<<< HEAD
 use App\Http\Controllers\NotificationController;
-=======
 use App\Http\Controllers\RateController;
->>>>>>> main
 use App\Http\Controllers\UniversityController;
 use App\Http\Middleware\Auth\AuthenticateAdmin;
 use App\Http\Middleware\Auth\AuthenticateDebater;
