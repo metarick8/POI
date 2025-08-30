@@ -23,6 +23,7 @@ use App\Http\Middleware\Auth\AuthenticateJudge;
 use App\Models\Admin;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Route;
+use Jubaer\Zoom\Facades\Zoom;
 
 Route::controller(AuthController::class)->group(function () {
     Route::post('register/{actor}', 'register')->where('actor', 'debater|judge|coach')->middleware(AuthenticateAdmin::class);
@@ -154,3 +155,28 @@ Route::post('notify-test', function (FirebaseService $firebaseService) {
 Route::post('/send-notification', [NotificationController::class, 'sendPushNotification']);
 Route::post('/admin/notification-setup',[NotificationController::class,'adminSetup'])->middleware(AuthenticateAdmin::class);
 Route::post('/notification-setup',[NotificationController::class,'setup'])->middleware(JwtMiddleware::class);
+
+
+
+//generating token in zoom:
+Route::get('zoom/test',function () {
+    
+$client = new \GuzzleHttp\Client();
+
+$response = $client->post('https://zoom.us/oauth/token', [
+    'headers' => [
+        'Authorization' => 'Basic ' . base64_encode(env('ZOOM_CLIENT_ID') . ':' . env('ZOOM_CLIENT_SECRET')),
+    ],
+    'form_params' => [
+        'grant_type' => 'account_credentials',
+        'account_id' => env('ZOOM_ACCOUNT_ID'),
+    ],
+]);
+
+$token = json_decode($response->getBody(), true)['access_token'];
+
+
+
+return $token;
+});
+

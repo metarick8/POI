@@ -11,27 +11,19 @@ trait UseZoom
 
     protected function generateZoomAccessToken()
     {
-        $clientId = env('ZOOM_CLIENT_ID');
-        $clientSecret = env('ZOOM_CLIENT_SECRET');
-        $accountId = env('ZOOM_ACCOUNT_ID');
+        $client = new \GuzzleHttp\Client();
 
-        $base64Credentials = base64_encode("$clientId:$clientSecret");
-
-        return $response = Http::withHeaders([
-            'Authorization' => "Basic $base64Credentials",
-            'Content-Type' => 'application/x-www-form-urlencoded',
-            'Accept' => 'application/json',
-        ])->post('https://zoom.us/oauth/token', [
-            'grant_type' => 'account_credentials',
-            'account_id' => $accountId,
+        $response = $client->post('https://zoom.us/oauth/token', [
+            'headers' => [
+                'Authorization' => 'Basic ' . base64_encode(env('ZOOM_CLIENT_ID') . ':' . env('ZOOM_CLIENT_SECRET')),
+            ],
+            'form_params' => [
+                'grant_type' => 'account_credentials',
+                'account_id' => env('ZOOM_ACCOUNT_ID'),
+            ],
         ]);
 
-        if ($response->failed()) {
-            Log::error('Zoom OAuth Token Error: ' . $response->body());
-            return null;
-        }
-
-        return $response->json()['access_token'];
+        return json_decode($response->getBody(), true)['access_token'];   
     }
 
     protected function toZoomTimeFormat($date, $time, $timezone = null)
