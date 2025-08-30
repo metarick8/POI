@@ -18,7 +18,7 @@ class DebateService
 {
     public function index(array $status = [], $perPage = 4)
     {
-        $query = Debate::with(['motion', 'chairJudge']);
+        $query = Debate::with(['motion', 'chairJudge','debaters']);
 
         if (!empty($status)) {
             $query->whereIn('status', $status);
