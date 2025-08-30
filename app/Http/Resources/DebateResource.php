@@ -43,25 +43,24 @@ class DebateResource extends JsonResource
             ];
         };
 
-        // Handle debaters based on status
-        $debatersData = $this->status === 'teamsConfirmed'
-            ? [
-                'teams' => $this->participantsDebaters
-                    ->groupBy('team_number')
-                    ->map(function ($group, $teamNumber) use ($mapParticipantDebater) {
-                        return [
-                            'team_number' => $teamNumber,
-                            'debaters' => $group->map($mapParticipantDebater)->take(2)->all(),
-                        ];
-                    })
-                    ->values()
-                    ->all(),
-            ]
-            : [
-                'debaters' => $this->participantsDebaters->isNotEmpty()
-                    ? $this->participantsDebaters->map($mapParticipantDebater)->all()
-                    : $this->debaters->map($mapDebater)->all(),
-            ];
+        // Always prepare the debaters array (used for both teams and debaters sections)
+        $debatersArray = $this->participantsDebaters->isNotEmpty()
+            ? $this->participantsDebaters->map($mapParticipantDebater)->all()
+            : $this->debaters->map($mapDebater)->all();
+
+        // Determine teams based on status
+        $teamsData = $this->status === 'teamsConfirmed'
+            ? $this->participantsDebaters
+            ->groupBy('team_number')
+            ->map(function ($group, $teamNumber) use ($mapParticipantDebater) {
+                return [
+                    'team_number' => $teamNumber,
+                    'debaters' => $group->map($mapParticipantDebater)->take(2)->all(),
+                ];
+            })
+            ->values()
+            ->all()
+            : null;
 
         return [
             'debate_id' => $this->id ?? null,
@@ -72,8 +71,8 @@ class DebateResource extends JsonResource
             'filter' => $this->filter ?? null,
             'motion' => $this->motion ? [
                 'motion_id' => $this->motion->id ?? null,
-                'title' => $this->motion->title ?? null,
-                'type' => $this->motion->type ?? null,
+                'title' => $this->motion->sentence ?? null,
+                'type' => $this->motion->sub_classifications ?? null,
             ] : null,
             'chair_judge' => $this->chairJudge && $this->chairJudge->user ? [
                 'chair_judge_id' => $this->chairJudge->id ?? null,
@@ -87,27 +86,12 @@ class DebateResource extends JsonResource
                         : null,
                 ];
             })->all(),
-            ...$debatersData,
+            'teams' => $teamsData,
+            'debaters' => $debatersArray,
             'applicants_count' => $this->applicants_count ?? 0,
             'debaters_count' => $this->debater_count ?? 0,
             'judge_count' => $this->judge_count ?? 0,
-            // 'meeting_id' => $this->meeting_id ?? null,
-            // 'start_url' => $this->start_url ?? null,
-            // 'join_url' => $this->join_url ?? null,
-            // 'password' => $this->password ?? null,
-            // 'recording_type' => $this->recording_type ?? null,
-            // 'zoom_recording_url' => $this->zoom_recording_url ?? null,
-            // 'cloudinary_recording_id' => $this->cloudinary_recording_id ?? null,
-            // 'cloudinary_recording_url' => $this->cloudinary_recording_url ?? null,
-            // 'recording_uploaded_at' => $this->recording_uploaded_at ? $this->recording_uploaded_at->toDateTimeString() : null,
-            // 'final_ranks' => $this->final_ranks ?? null,
-            // 'winner' => $this->winner ?? null,
-            // 'summary' => $this->summary ?? null,
-            // 'cancellation_reason' => $this->cancellation_reason ?? null,
-            // 'is_able_to_apply' => $this->isAbleToApply ?? false,
-            // 'has_recording' => $this->hasRecording() ?? false,
-            // 'is_ready_for_preparation' => $this->isReadyForPreparation() ?? false,
-            // 'can_start_zoom_meeting' => $this->canStartZoomMeeting() ?? false,
+            'isAbleToApply' => $this->isAbleToApply,
         ];
     }
 }
