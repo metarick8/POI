@@ -19,7 +19,7 @@ class ZoomService
     /**
      * Create a Zoom meeting for a debate
      */
-    public function createDebateMeeting(Debate $debate): array
+    public function createDebateMeeting(Debate $debate)
     {
         DB::beginTransaction();
 
@@ -58,7 +58,7 @@ class ZoomService
                 'timezone' => config('app.timezone', 'UTC'),
             ];
 
-            $result = $this->createMeeting($debate->chairJudge->zoom_id, $meetingData);
+            return $result = $this->createMeeting($debate->chairJudge->zoom_id, $meetingData);
 
             if (!$result['success']) {
                 throw new Exception($result['error'] ?? 'Failed to create Zoom meeting');
@@ -86,7 +86,6 @@ class ZoomService
                 'data' => $meetingInfo,
                 'message' => 'Zoom meeting created successfully'
             ];
-
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Failed to create Zoom meeting', [
@@ -143,7 +142,7 @@ class ZoomService
     /**
      * Link a judge to Zoom
      */
-    public function linkJudgeToZoom(int $judgeId, string $email)
+    public function linkJudgeToZoom(int $judgeId, string $email): array
     {
         try {
             $judge = Judge::findOrFail($judgeId);
@@ -154,7 +153,8 @@ class ZoomService
                     'message' => 'Judge already linked to Zoom'
                 ];
             }
-            return $result = $this->linkZoomToJudge($judgeId, $email);
+
+            $result = $this->linkZoomToJudge($judgeId, $email);
 
             Log::info('Judge linked to Zoom', [
                 'judge_id' => $judgeId,
@@ -166,7 +166,6 @@ class ZoomService
                 'success' => true,
                 'message' => $result['message']
             ];
-
         } catch (Exception $e) {
             Log::error('Failed to link judge to Zoom', [
                 'judge_id' => $judgeId,
@@ -214,7 +213,6 @@ class ZoomService
                 'success' => true,
                 'data' => $recordings
             ];
-
         } catch (Exception $e) {
             Log::error('Failed to get meeting recording', [
                 'meeting_id' => $meetingId,
@@ -246,7 +244,6 @@ class ZoomService
                 'success' => true,
                 'message' => 'Debate started successfully'
             ];
-
         } catch (Exception $e) {
             Log::error('Failed to start debate', [
                 'debate_id' => $debate->id,

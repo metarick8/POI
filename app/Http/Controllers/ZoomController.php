@@ -31,7 +31,7 @@ class ZoomController extends Controller
                 'email' => 'required|email'
             ]);
 
-            return $result = $this->zoomService->linkJudgeToZoom(
+            $result = $this->zoomService->linkJudgeToZoom(
                 $validated['judge_id'],
                 $validated['email']
             );
@@ -46,7 +46,6 @@ class ZoomController extends Controller
             }
 
             return $this->successResponse($result['message'], null);
-
         } catch (\Exception $e) {
             Log::error('Error linking judge to Zoom', [
                 'error' => $e->getMessage(),
@@ -70,7 +69,7 @@ class ZoomController extends Controller
         try {
             $debate = Debate::findOrFail($debateId);
 
-            $result = $this->zoomService->createDebateMeeting($debate);
+             return $result = $this->zoomService->createDebateMeeting($debate);
 
             if (!$result['success']) {
                 return $this->errorResponse(
@@ -85,7 +84,6 @@ class ZoomController extends Controller
                 $result['message'],
                 $result['data']
             );
-
         } catch (\Exception $e) {
             Log::error('Error creating Zoom meeting', [
                 'error' => $e->getMessage(),
@@ -137,7 +135,6 @@ class ZoomController extends Controller
                 'Start URL retrieved successfully',
                 ['start_url' => $debate->start_url]
             );
-
         } catch (\Exception $e) {
             Log::error('Error getting start URL', [
                 'error' => $e->getMessage(),
@@ -184,7 +181,6 @@ class ZoomController extends Controller
                     'password' => $debate->password
                 ]
             );
-
         } catch (\Exception $e) {
             Log::error('Error getting join URL', [
                 'error' => $e->getMessage(),
@@ -235,7 +231,6 @@ class ZoomController extends Controller
             }
 
             return $this->successResponse($result['message'], null);
-
         } catch (\Exception $e) {
             Log::error('Error starting debate', [
                 'error' => $e->getMessage(),
@@ -283,7 +278,6 @@ class ZoomController extends Controller
                 'Recordings retrieved successfully',
                 $result['data']
             );
-
         } catch (\Exception $e) {
             Log::error('Error getting recordings', [
                 'error' => $e->getMessage(),
@@ -311,7 +305,6 @@ class ZoomController extends Controller
                 'Checked upcoming meetings',
                 $results
             );
-
         } catch (\Exception $e) {
             Log::error('Error checking upcoming meetings', [
                 'error' => $e->getMessage()
