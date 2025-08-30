@@ -15,38 +15,23 @@ trait UseZoom
         $clientSecret = env('ZOOM_CLIENT_SECRET');
         $accountId = env('ZOOM_ACCOUNT_ID');
 
-        if (!$clientId || !$clientSecret || !$accountId) {
-            Log::error('Zoom OAuth Token Error: Missing credentials in .env file');
-            return null;
-        }
-
         $base64Credentials = base64_encode("$clientId:$clientSecret");
 
-        $response = Http::withHeaders([
+        return $response = Http::withHeaders([
             'Authorization' => "Basic $base64Credentials",
             'Content-Type' => 'application/x-www-form-urlencoded',
-        ])->asForm()->post('https://zoom.us/oauth/token', [
+            'Accept' => 'application/json',
+        ])->post('https://zoom.us/oauth/token', [
             'grant_type' => 'account_credentials',
             'account_id' => $accountId,
         ]);
 
         if ($response->failed()) {
-            Log::error('Zoom OAuth Token Error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'headers' => $response->headers(),
-            ]);
+            Log::error('Zoom OAuth Token Error: ' . $response->body());
             return null;
         }
 
-        $accessToken = $response->json()['access_token'] ?? null;
-        if (!$accessToken) {
-            Log::error('Zoom OAuth Token Error: No access token in response', [
-                'body' => $response->body(),
-            ]);
-        }
-
-        return $accessToken;
+        return $response->json()['access_token'];
     }
 
     protected function toZoomTimeFormat($date, $time, $timezone = null)
@@ -63,7 +48,7 @@ trait UseZoom
 
     public function createMeeting($zoomUserId, $data)
     {
-        $accessToken = $this->generateZoomAccessToken();
+        return $accessToken = $this->generateZoomAccessToken();
         if (!$accessToken) {
             return ['success' => false, 'error' => 'Failed to get access token'];
         }
@@ -111,7 +96,7 @@ trait UseZoom
             return ['message' => 'Judge already linked to Zoom.'];
         }
 
-         $accessToken = $this->generateZoomAccessToken();
+        $accessToken = $this->generateZoomAccessToken();
         if (!$accessToken) {
             return ['message' => 'Failed to get access token'];
         }
@@ -127,11 +112,10 @@ trait UseZoom
             ],
         ];
 
-        return $response = Http::withHeaders([
+        $response = Http::withHeaders([
             'Authorization' => "Bearer $accessToken",
             'Content-Type' => 'application/json',
         ])->post($url, $body);
-
         if ($response->failed()) {
             Log::error('Zoom Create User Error: ' . $response->body());
             return ['message' => $response->json()['message'] ?? 'Failed to link (email may already exist).'];
