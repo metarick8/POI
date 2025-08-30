@@ -25,6 +25,7 @@ class User extends Authenticatable implements JWTSubject
         'education_degree',
         'birth_date',
         'role', // admin, user
+        'fcm_token',
         'banned_at'
     ];
 

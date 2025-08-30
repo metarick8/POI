@@ -47,7 +47,7 @@ class DebateController extends Controller
         ]);
 
         $debates = $this->debateService->index($request->validatedStatus());
-        $debates->getCollection()->transform(function ($debate) use ($user, $actor) {
+        $debates->transform(function ($debate) use ($user, $actor) {
             $isAbleToApply = false;
             if ($actor === 'debater')
                 $isAbleToApply = $user->can('applyDebater', $debate);

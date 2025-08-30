@@ -20,10 +20,12 @@ use App\Http\Controllers\UniversityController;
 use App\Http\Middleware\Auth\AuthenticateAdmin;
 use App\Http\Middleware\Auth\AuthenticateDebater;
 use App\Http\Middleware\Auth\AuthenticateJudge;
+use App\Models\Admin;
+use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Route;
 
 Route::controller(AuthController::class)->group(function () {
-    Route::post('register/{actor}', 'register')->where('actor', 'user|debater|judge|coach')->middleware(AuthenticateAdmin::class);
+    Route::post('register/{actor}', 'register')->where('actor', 'debater|judge|coach')->middleware(AuthenticateAdmin::class);
     Route::post('login', 'login');
     Route::get('logout', 'logout');
     Route::get('refresh', 'refresh');
@@ -143,6 +145,12 @@ Route::controller(LiveController::class)->group(function () {
 Route::get('this/test', function () {
     return 'this is test';
 });
+Route::post('notify-test', function (FirebaseService $firebaseService) {
+    
+    $firebaseService->sendNotification(Admin::first()->fcm_token, 'Debater Application', 'You have a new debater application');
+});
 
 //testing notification:
 Route::post('/send-notification', [NotificationController::class, 'sendPushNotification']);
+Route::post('/admin/notification-setup',[NotificationController::class,'adminSetup'])->middleware(AuthenticateAdmin::class);
+Route::post('/notification-setup',[NotificationController::class,'setup'])->middleware(JwtMiddleware::class);

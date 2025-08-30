@@ -23,7 +23,7 @@ class DebateService
         if (!empty($status)) {
             $query->whereIn('status', $status);
         }
-        return $query->paginate($perPage);
+        return $query->get();
     }
     public function indexForAdmin()
     {

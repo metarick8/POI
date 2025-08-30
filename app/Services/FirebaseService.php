@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use Exception;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\CloudMessage;
 
@@ -15,10 +16,14 @@ class FirebaseService
         $this->messaging = $factory->createMessaging();
     }
     public function sendNotification($token, $title, $body, $data=[]) {
-        $message = CloudMessage::withTarget('token',$token)
-                    ->withNotification(['title'=>$title, 'body'=>$body])
-                    ->withData($data);
+        try{
 
-        $this->messaging->send($message);
+            $message = CloudMessage::withTarget('token',$token)
+            ->withNotification(['title'=>$title, 'body'=>$body])
+            ->withData($data);
+            
+            $this->messaging->send($message);
+        } catch(Exception $e) {
+        }
     }
 }
