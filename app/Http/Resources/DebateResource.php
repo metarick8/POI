@@ -92,6 +92,8 @@ class DebateResource extends JsonResource
             'debaters_count' => $this->debater_count ?? 0,
             'judge_count' => $this->judge_count ?? 0,
             'isAbleToApply' => $this->isAbleToApply,
+            'isShowButton' => $this->isShowButton ?? false,
+            'isAbleToPrepare' => $this->isAbleToPrepare ?? false,
         ];
     }
 }

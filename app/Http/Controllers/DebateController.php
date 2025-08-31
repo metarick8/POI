@@ -32,33 +32,49 @@ class DebateController extends Controller
 
     public function index(ListDebatesRequest $request)
     {
-        if (!$user = JWTAuth::parseToken()->authenticate())
-            return response()->json(['error' => 'User not found'], 404);
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse('User not found', null, ['error' => 'User not found'], 404);
+        }
 
         [$actor, $actorResource] = $this->authController->getAuthenticatedActor($user->id);
         if (!$user) {
             Log::error('No authenticated user found in DebateController');
-            return $this->errorResponse('Unauthorized', null, ['No authenticated user found'], 401);
+            return $this->errorResponse('Unauthorized', null, ['error' => 'No authenticated user found'], 401);
         }
+
         Log::debug('Authenticated user in DebateController', [
             'guard' => $actor,
             'user_id' => $user->id,
-            'model' => get_class($user)
+            'model' => get_class($user),
         ]);
 
         $debates = $this->debateService->index($request->validatedStatus());
         $debates->transform(function ($debate) use ($user, $actor) {
             $isAbleToApply = false;
-            if ($actor === 'debater')
+            if ($actor === 'debater') {
                 $isAbleToApply = $user->can('applyDebater', $debate);
-            elseif ($actor === 'judge')
+            } elseif ($actor === 'judge') {
                 $isAbleToApply = $user->can('applyJudge', [$debate, 'panelist']) || ($debate->chair_judge_id === null && $user->can('applyJudge', [$debate, 'chair']));
+            }
 
             $debate->isAbleToApply = $isAbleToApply;
+
+            // Add preparation status for judges
+            if ($actor === 'judge') {
+                $prepStatus = $this->debateService->getPreparationStatus($debate, $user->id);
+                $debate->isShowButton = $prepStatus['isShowButton'];
+                $debate->isAbleToPrepare = $prepStatus['isAbleToPrepare'];
+            } else {
+                $debate->isShowButton = false;
+                $debate->isAbleToPrepare = false;
+            }
+
             return $debate;
         });
+
         return $this->successResponse('Debates retrieved successfully', DebateResource::collection($debates));
     }
+
     public function indexForAdmin()
     {
         $debates = $this->debateService->indexForAdmin();
@@ -66,15 +82,52 @@ class DebateController extends Controller
     }
     public function show(Debate $debate)
     {
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse('User not found', null, ['error' => 'User not found'], 404);
+        }
+
+        [$actor, $actorResource] = $this->authController->getAuthenticatedActor($user->id);
+        if (!$user) {
+            Log::error('No authenticated user found in DebateController');
+            return $this->errorResponse('Unauthorized', null, ['error' => 'No authenticated user found'], 401);
+        }
+
+        Log::debug('Authenticated user in DebateController', [
+            'guard' => $actor,
+            'user_id' => $user->id,
+            'model' => get_class($user),
+        ]);
+
         $debate->load([
             'motion:id,sentence',
-            'chairJudge.user:id,name',
-            'panelistJudges.judge.user:id,name',
-            'debaters.user:id,name',
+            'chairJudge.user:id,first_name,last_name',
+            'panelistJudges.judge.user:id,first_name,last_name',
+            'debaters:id,first_name,last_name', // Load User model directly
+            'participantsDebaters.debater.user:id,first_name,last_name',
+            'participantsDebaters.speaker.team'
         ]);
+
+        $isAbleToApply = false;
+        //  if ($actor === 'debater') {
+        //         $isAbleToApply = $user->can('applyDebater', $debate);
+        //     } elseif ($actor === 'judge') {
+        //         $isAbleToApply = $user->can('applyJudge', [$debate, 'panelist']) || ($debate->chair_judge_id === null && $user->can('applyJudge', [$debate, 'chair']));
+        //     }
+
+        $debate->isAbleToApply = $isAbleToApply;
+
+        // Add preparation status for judges
+        if ($actor === 'judge') {
+            $prepStatus = $this->debateService->getPreparationStatus($debate, $user->id);
+            $debate->isShowButton = $prepStatus['isShowButton'];
+            $debate->isAbleToPrepare = $prepStatus['isAbleToPrepare'];
+        } else {
+            $debate->isShowButton = false;
+            $debate->isAbleToPrepare = false;
+        }
+
         return $this->successResponse('Debate retrieved successfully', new DebateResource($debate));
     }
-
     public function create(DebateInitializeRequest $request)
     {
         Log::debug('Create debate request received', $request->all());
@@ -146,7 +199,7 @@ class DebateController extends Controller
     {
         try {
             // Load participants with their speaker and team details
-             $participants = $debate->participantsDebaters()
+            $participants = $debate->participantsDebaters()
                 ->with(['debater.user', 'speaker.team'])
                 ->get();
 
@@ -221,16 +274,16 @@ class DebateController extends Controller
 
     public function result(DebateResultRequest $request, Debate $debate) {}
 
-    public function preparationStatus(DebatePreparationRequest $request, Debate $debate)
-    {
-        $result = $this->debateService->prepare($request, $debate);
+    // public function preparationStatus(DebatePreparationRequest $request, Debate $debate)
+    // {
+    //     $result = $this->debateService->prepare($request, $debate);
 
-        if ($result['success']) {
-            return $this->successResponse($result['message'], null);
-        }
+    //     if ($result['success']) {
+    //         return $this->successResponse($result['message'], null);
+    //     }
 
-        return $this->errorResponse('Failed to prepare debate', null, ['error' => $result['error']], 422);
-    }
+    //     return $this->errorResponse('Failed to prepare debate', null, ['error' => $result['error']], 422);
+    // }
 
     /**
      * Assign teams after players are confirmed (Admin only)

@@ -250,194 +250,112 @@ class DebateService
         }
     }
 
-        public function finish(Debate $debate, string $summary, array $ranks)
-        {
-            DB::beginTransaction();
-
-            try {
-                // Validate debate status
-                if ($debate->status !== 'ongoing') {
-                    throw new Exception('Debate must be in ongoing status to finish');
-                }
-
-                // Validate team structure: 8 debaters in 4 teams
-                $participants = $debate->participantsDebaters()->with('speaker.team')->get();
-                if ($participants->count() !== 8) {
-                    throw new Exception('Debate must have exactly 8 debaters');
-                }
-
-                // Group debaters by team_number
-                $teams = $participants->groupBy('team_number')->map(function ($teamParticipants) {
-                    return $teamParticipants->pluck('debater_id')->toArray();
-                });
-
-                if ($teams->count() !== 4) {
-                    throw new Exception('Debate must have exactly 4 teams');
-                }
-
-                // Validate each team has exactly 2 debaters
-                foreach ($teams as $teamNumber => $debaters) {
-                    if (count($debaters) !== 2) {
-                        throw new Exception("Team number {$teamNumber} must have exactly 2 debaters");
-                    }
-                }
-
-                // Validate ranks: must be exactly 4 unique ranks (1 to 4)
-                if (count($ranks) !== 4) {
-                    throw new Exception('Exactly 4 team ranks must be provided');
-                }
-
-                $rankValues = array_values($ranks);
-                $expectedRanks = [1, 2, 3, 4];
-                if (array_diff($rankValues, $expectedRanks) || count(array_unique($rankValues)) !== 4) {
-                    throw new Exception('Ranks must be unique values from 1 to 4');
-                }
-
-                // Validate that all team numbers in ranks exist
-                foreach (array_keys($ranks) as $teamNumber) {
-                    if (!isset($teams[$teamNumber])) {
-                        throw new Exception("Invalid team number: {$teamNumber}");
-                    }
-                }
-
-                // Determine the winner (team with rank 1)
-                $winningTeamNumber = array_search(1, $ranks);
-                if ($winningTeamNumber === false) {
-                    throw new Exception('A team must be ranked 1 to determine the winner');
-                }
-
-                // Get the team role for the winning team
-                $winningParticipant = $participants->firstWhere('team_number', $winningTeamNumber);
-                $winningTeamRole = $winningParticipant->speaker->team->role ?? null;
-                if (!in_array($winningTeamRole, ['OG', 'OO', 'CG', 'CO'])) {
-                    throw new Exception('Invalid winning team role');
-                }
-
-                // Update debate with winner, summary, and ranks
-                $debate->update([
-                    'status' => 'finished',
-                    'winner' => $winningTeamRole,
-                    'summary' => $summary,
-                    'final_ranks' => $ranks, // Store as JSON
-                    'updated_at' => now(),
-                ]);
-
-                // Update individual debater ranks in participants_debaters
-                foreach ($participants as $participant) {
-                    $teamNumber = $participant->team_number;
-                    $participant->update(['rank' => $ranks[$teamNumber]]);
-                }
-
-                DB::commit();
-                return $debate;
-            } catch (Throwable $t) {
-                DB::rollBack();
-                Log::error("Failed to finish debate {$debate->id}: {$t->getMessage()}");
-                return $t->getMessage();
-            }
-        }
-    public function prepare(Request $request, Debate $debate)
+    public function finish(Debate $debate, string $summary, array $ranks)
     {
         DB::beginTransaction();
 
         try {
-            Log::info('Attempting to prepare debate', [
-                'debate_id' => $debate->id,
-                'motion_id' => $request->motion_id,
-                'status' => $debate->status,
-            ]);
-
-            // Validate debate is ready for preparation
-            if ($debate->status !== 'debatePreparation') {
-                throw new Exception('Debate must be in debatePreparation status');
+            // Validate debate status
+            if ($debate->status !== 'ongoing') {
+                throw new Exception('Debate must be in ongoing status to finish');
             }
 
-            // Set motion if provided
-            if ($request->motion_id) {
-                $debate->motion_id = $request->motion_id;
-                $debate->save();
-            }
-
-            $participants = ParticipantsDebater::where('debate_id', $debate->id)->get();
-
+            // Validate team structure: 8 debaters in 4 teams
+            $participants = $debate->participantsDebaters()->with('speaker.team')->get();
             if ($participants->count() !== 8) {
-                throw new Exception('Must have exactly 8 participants for debate preparation');
+                throw new Exception('Debate must have exactly 8 debaters');
             }
 
-            // Validate we have 4 teams with 2 players each
-            $teamCounts = $participants->groupBy('team_number')->map->count();
-            if ($teamCounts->count() !== 4 || $teamCounts->contains(fn($count) => $count !== 2)) {
-                throw new Exception('Must have exactly 4 teams with 2 players each');
-            }
-
-            $positions = $request->positions ?? [];
-
-            // Get static teams and speakers
-            $teams = Team::all()->keyBy('id'); // OG, OO, CG, CO
-            $speakers = Speaker::all()->keyBy('id'); // 8 speaker positions
+            // Group debaters by team_number
+            $teams = $participants->groupBy('team_number')->map(function ($teamParticipants) {
+                return $teamParticipants->pluck('debater_id')->toArray();
+            });
 
             if ($teams->count() !== 4) {
-                throw new Exception('Must have exactly 4 static teams (OG, OO, CG, CO)');
+                throw new Exception('Debate must have exactly 4 teams');
             }
 
-            if ($speakers->count() !== 8) {
-                throw new Exception('Must have exactly 8 static speaker positions');
-            }
-
-            // Assign speakers to participants
-            foreach ($positions as $position) {
-                $teamNumber = $position['team_number'];
-                $debaterIds = $position['debater_ids'];
-                $speakerIds = $position['speaker_ids']; // Speaker positions for this team
-
-                if (count($debaterIds) !== 2 || count($speakerIds) !== 2) {
-                    throw new Exception("Team {$teamNumber} must have exactly 2 debaters and 2 speaker positions");
-                }
-
-                // Validate speakers belong to the correct team
-                $teamSpeakers = $speakers->whereIn('id', $speakerIds)->where('team_id', $teamNumber);
-                if ($teamSpeakers->count() !== 2) {
-                    throw new Exception("Invalid speaker assignments for team {$teamNumber}");
-                }
-
-                // Update participants
-                for ($i = 0; $i < 2; $i++) {
-                    $participant = $participants->where('debater_id', $debaterIds[$i])
-                        ->where('team_number', $teamNumber)
-                        ->first();
-
-                    if (!$participant) {
-                        throw new Exception("Participant not found for debater {$debaterIds[$i]} in team {$teamNumber}");
-                    }
-
-                    $participant->update([
-                        'speaker_id' => $speakerIds[$i],
-                        'rank' => $i + 1 // First speaker = 1, Second speaker = 2
-                    ]);
+            // Validate each team has exactly 2 debaters
+            foreach ($teams as $teamNumber => $debaters) {
+                if (count($debaters) !== 2) {
+                    throw new Exception("Team number {$teamNumber} must have exactly 2 debaters");
                 }
             }
 
-            // Validate all participants have been assigned speaker positions
-            $unassignedParticipants = ParticipantsDebater::where('debate_id', $debate->id)
-                ->whereNull('speaker_id')
-                ->count();
-
-            if ($unassignedParticipants > 0) {
-                throw new Exception('All participants must be assigned speaker positions');
+            // Validate ranks: must be exactly 4 unique ranks (1 to 4)
+            if (count($ranks) !== 4) {
+                throw new Exception('Exactly 4 team ranks must be provided');
             }
 
-            Log::info('Debate preparation completed successfully', ['debate_id' => $debate->id]);
+            $rankValues = array_values($ranks);
+            $expectedRanks = [1, 2, 3, 4];
+            if (array_diff($rankValues, $expectedRanks) || count(array_unique($rankValues)) !== 4) {
+                throw new Exception('Ranks must be unique values from 1 to 4');
+            }
+
+            // Validate that all team numbers in ranks exist
+            foreach (array_keys($ranks) as $teamNumber) {
+                if (!isset($teams[$teamNumber])) {
+                    throw new Exception("Invalid team number: {$teamNumber}");
+                }
+            }
+
+            // Determine the winner (team with rank 1)
+            $winningTeamNumber = array_search(1, $ranks);
+            if ($winningTeamNumber === false) {
+                throw new Exception('A team must be ranked 1 to determine the winner');
+            }
+
+            // Get the team role for the winning team
+            $winningParticipant = $participants->firstWhere('team_number', $winningTeamNumber);
+            $winningTeamRole = $winningParticipant->speaker->team->role ?? null;
+            if (!in_array($winningTeamRole, ['OG', 'OO', 'CG', 'CO'])) {
+                throw new Exception('Invalid winning team role');
+            }
+
+            // Update debate with winner, summary, and ranks
+            $debate->update([
+                'status' => 'finished',
+                'winner' => $winningTeamRole,
+                'summary' => $summary,
+                'final_ranks' => $ranks, // Store as JSON
+                'updated_at' => now(),
+            ]);
+
+            // Update individual debater ranks in participants_debaters
+            foreach ($participants as $participant) {
+                $teamNumber = $participant->team_number;
+                $participant->update(['rank' => $ranks[$teamNumber]]);
+            }
 
             DB::commit();
-            return ['success' => true, 'message' => 'Debate preparation completed successfully'];
-        } catch (\Exception $e) {
+            return $debate;
+        } catch (Throwable $t) {
             DB::rollBack();
-            Log::error('Failed to prepare debate', [
-                'debate_id' => $debate->id,
-                'error' => $e->getMessage(),
-            ]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            Log::error("Failed to finish debate {$debate->id}: {$t->getMessage()}");
+            return $t->getMessage();
         }
+    }
+    public function getPreparationStatus(Debate $debate, $judgeId)
+    {
+        $isShowButton = false;
+        $isAbleToPrepare = false;
+
+        // Check if debate is in teamsConfirmed status
+        if ($debate->status === 'teamsConfirmed') {
+            // isShowButton: true if the authenticated judge is the chair judge
+            $isShowButton = $debate->chair_judge_id === $judgeId;
+
+            // isAbleToPrepare: true if current time is within 30 minutes of debate start
+            $debateDateTime = \Carbon\Carbon::parse($debate->start_date->toDateString() . ' ' . $debate->start_time);
+            $now = now();
+            $isAbleToPrepare = $now->diffInMinutes($debateDateTime, false) <= 30 && $now->lessThanOrEqualTo($debateDateTime);
+        }
+
+        return [
+            'isShowButton' => $isShowButton,
+            'isAbleToPrepare' => $isAbleToPrepare,
+        ];
     }
 
     /**
