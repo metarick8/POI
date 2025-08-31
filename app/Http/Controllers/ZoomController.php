@@ -69,7 +69,7 @@ class ZoomController extends Controller
         try {
             $debate = Debate::findOrFail($debateId);
 
-             return $result = $this->zoomService->createDebateMeeting($debate);
+             $result = $this->zoomService->createDebateMeeting($debate);
 
             if (!$result['success']) {
                 return $this->errorResponse(
