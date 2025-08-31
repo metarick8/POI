@@ -23,7 +23,7 @@ trait UseZoom
             ],
         ]);
 
-        return json_decode($response->getBody(), true)['access_token'];   
+        return json_decode($response->getBody(), true)['access_token'];
     }
 
     protected function toZoomTimeFormat($date, $time, $timezone = null)
@@ -40,7 +40,7 @@ trait UseZoom
 
     public function createMeeting($zoomUserId, $data)
     {
-        return $accessToken = $this->generateZoomAccessToken();
+        $accessToken = $this->generateZoomAccessToken();
         if (!$accessToken) {
             return ['success' => false, 'error' => 'Failed to get access token'];
         }

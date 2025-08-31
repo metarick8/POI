@@ -58,7 +58,7 @@ class ZoomService
                 'timezone' => config('app.timezone', 'UTC'),
             ];
 
-            return $result = $this->createMeeting($debate->chairJudge->zoom_id, $meetingData);
+            $result = $this->createMeeting($debate->chairJudge->zoom_id, $meetingData);
 
             if (!$result['success']) {
                 throw new Exception($result['error'] ?? 'Failed to create Zoom meeting');

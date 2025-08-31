@@ -18,7 +18,7 @@ class DebateService
 {
     public function index(array $status = [], $perPage = 4)
     {
-        $query = Debate::with(['motion', 'chairJudge','debaters']);
+        $query = Debate::with(['motion', 'chairJudge', 'debaters']);
 
         if (!empty($status)) {
             $query->whereIn('status', $status);
@@ -86,13 +86,13 @@ class DebateService
                 $debate->update(['status' => 'playersConfirmed', 'updated_at' => now()]);
                 Log::info("Debate {$debate->id} updated to playersConfirmed");
             }
-            
+
             // Check if debate should move to debatePreparation (15 minutes before start)
             elseif ($debate->status === 'teamsConfirmed' && $currentTime->diffInMinutes($startDateTime, false) <= 15) {
                 $debate->update(['status' => 'debatePreparation', 'updated_at' => now()]);
                 Log::info("Debate {$debate->id} updated to debatePreparation");
             }
-            
+
             // Check if debate should move to ongoing
             elseif ($debate->status === 'debatePreparation' && $currentTime->gte($startDateTime)) {
                 $debate->update(['status' => 'ongoing', 'updated_at' => now()]);
@@ -115,7 +115,7 @@ class DebateService
     {
         $chairCount = $debate->chair_judge_id ? 1 : 0;
         $panelistCount = Participants_panelist_judge::where('debate_id', $debate->id)->count();
-        
+
         return $chairCount + $panelistCount;
     }
 
@@ -125,7 +125,7 @@ class DebateService
     public function assignTeams(Debate $debate, array $teamAssignments): array
     {
         DB::beginTransaction();
-        
+
         try {
             if ($debate->status !== 'playersConfirmed') {
                 throw new Exception('Debate must be in playersConfirmed status to assign teams');
@@ -144,18 +144,17 @@ class DebateService
                 // Update participants with team numbers
                 foreach ($debaterIds as $debaterId) {
                     ParticipantsDebater::where('debate_id', $debate->id)
-                                      ->where('debater_id', $debaterId)
-                                      ->update(['team_number' => $teamNumber]);
+                        ->where('debater_id', $debaterId)
+                        ->update(['team_number' => $teamNumber]);
                 }
             }
 
             $debate->update(['status' => 'teamsConfirmed', 'updated_at' => now()]);
-            
+
             Log::info("Teams assigned for debate {$debate->id}");
-            
+
             DB::commit();
             return ['success' => true, 'message' => 'Teams assigned successfully'];
-            
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error("Failed to assign teams for debate {$debate->id}: {$e->getMessage()}");
@@ -169,20 +168,20 @@ class DebateService
     public function addPanelistJudge(Debate $debate, int $judgeId): array
     {
         DB::beginTransaction();
-        
+
         try {
             // Check current panelist count
             $currentPanelistCount = Participants_panelist_judge::where('debate_id', $debate->id)->count();
-            
+
             if ($currentPanelistCount >= 2) {
                 throw new Exception('Maximum of 2 panelist judges allowed per debate');
             }
 
             // Check if judge is already assigned
             $exists = Participants_panelist_judge::where('debate_id', $debate->id)
-                                                ->where('judge_id', $judgeId)
-                                                ->exists();
-            
+                ->where('judge_id', $judgeId)
+                ->exists();
+
             if ($exists) {
                 throw new Exception('Judge is already assigned as panelist to this debate');
             }
@@ -204,7 +203,6 @@ class DebateService
 
             DB::commit();
             return ['success' => true, 'message' => 'Panelist judge added successfully'];
-            
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error("Failed to add panelist judge: {$e->getMessage()}");
@@ -252,26 +250,92 @@ class DebateService
         }
     }
 
-    public function finish(Debate $debate, string $winner, string $summary)
-    {
-        DB::beginTransaction();
+        public function finish(Debate $debate, string $summary, array $ranks)
+        {
+            DB::beginTransaction();
 
-        try {
-            $debate->update([
-                'status' => 'finished',
-                'winner' => $winner,
-                'summary' => $summary,
-                'updated_at' => now(),
-            ]);
+            try {
+                // Validate debate status
+                if ($debate->status !== 'ongoing') {
+                    throw new Exception('Debate must be in ongoing status to finish');
+                }
 
-            DB::commit();
-            return $debate;
-        } catch (Throwable $t) {
-            DB::rollBack();
-            Log::error("Failed to finish debate {$debate->id}: {$t->getMessage()}");
-            return $t->getMessage();
+                // Validate team structure: 8 debaters in 4 teams
+                $participants = $debate->participantsDebaters()->with('speaker.team')->get();
+                if ($participants->count() !== 8) {
+                    throw new Exception('Debate must have exactly 8 debaters');
+                }
+
+                // Group debaters by team_number
+                $teams = $participants->groupBy('team_number')->map(function ($teamParticipants) {
+                    return $teamParticipants->pluck('debater_id')->toArray();
+                });
+
+                if ($teams->count() !== 4) {
+                    throw new Exception('Debate must have exactly 4 teams');
+                }
+
+                // Validate each team has exactly 2 debaters
+                foreach ($teams as $teamNumber => $debaters) {
+                    if (count($debaters) !== 2) {
+                        throw new Exception("Team number {$teamNumber} must have exactly 2 debaters");
+                    }
+                }
+
+                // Validate ranks: must be exactly 4 unique ranks (1 to 4)
+                if (count($ranks) !== 4) {
+                    throw new Exception('Exactly 4 team ranks must be provided');
+                }
+
+                $rankValues = array_values($ranks);
+                $expectedRanks = [1, 2, 3, 4];
+                if (array_diff($rankValues, $expectedRanks) || count(array_unique($rankValues)) !== 4) {
+                    throw new Exception('Ranks must be unique values from 1 to 4');
+                }
+
+                // Validate that all team numbers in ranks exist
+                foreach (array_keys($ranks) as $teamNumber) {
+                    if (!isset($teams[$teamNumber])) {
+                        throw new Exception("Invalid team number: {$teamNumber}");
+                    }
+                }
+
+                // Determine the winner (team with rank 1)
+                $winningTeamNumber = array_search(1, $ranks);
+                if ($winningTeamNumber === false) {
+                    throw new Exception('A team must be ranked 1 to determine the winner');
+                }
+
+                // Get the team role for the winning team
+                $winningParticipant = $participants->firstWhere('team_number', $winningTeamNumber);
+                $winningTeamRole = $winningParticipant->speaker->team->role ?? null;
+                if (!in_array($winningTeamRole, ['OG', 'OO', 'CG', 'CO'])) {
+                    throw new Exception('Invalid winning team role');
+                }
+
+                // Update debate with winner, summary, and ranks
+                $debate->update([
+                    'status' => 'finished',
+                    'winner' => $winningTeamRole,
+                    'summary' => $summary,
+                    'final_ranks' => $ranks, // Store as JSON
+                    'updated_at' => now(),
+                ]);
+
+                // Update individual debater ranks in participants_debaters
+                foreach ($participants as $participant) {
+                    $teamNumber = $participant->team_number;
+                    $participant->update(['rank' => $ranks[$teamNumber]]);
+                }
+
+                DB::commit();
+                return $debate;
+            } catch (Throwable $t) {
+                DB::rollBack();
+                Log::error("Failed to finish debate {$debate->id}: {$t->getMessage()}");
+                return $t->getMessage();
+            }
         }
-    }
     public function prepare(Request $request, Debate $debate)
     {
         DB::beginTransaction();
@@ -287,7 +351,7 @@ class DebateService
             if ($debate->status !== 'debatePreparation') {
                 throw new Exception('Debate must be in debatePreparation status');
             }
-            
+
             // Set motion if provided
             if ($request->motion_id) {
                 $debate->motion_id = $request->motion_id;
@@ -307,11 +371,11 @@ class DebateService
             }
 
             $positions = $request->positions ?? [];
-            
+
             // Get static teams and speakers
             $teams = Team::all()->keyBy('id'); // OG, OO, CG, CO
             $speakers = Speaker::all()->keyBy('id'); // 8 speaker positions
-            
+
             if ($teams->count() !== 4) {
                 throw new Exception('Must have exactly 4 static teams (OG, OO, CG, CO)');
             }
@@ -339,9 +403,9 @@ class DebateService
                 // Update participants
                 for ($i = 0; $i < 2; $i++) {
                     $participant = $participants->where('debater_id', $debaterIds[$i])
-                                               ->where('team_number', $teamNumber)
-                                               ->first();
-                    
+                        ->where('team_number', $teamNumber)
+                        ->first();
+
                     if (!$participant) {
                         throw new Exception("Participant not found for debater {$debaterIds[$i]} in team {$teamNumber}");
                     }
@@ -355,18 +419,17 @@ class DebateService
 
             // Validate all participants have been assigned speaker positions
             $unassignedParticipants = ParticipantsDebater::where('debate_id', $debate->id)
-                                                        ->whereNull('speaker_id')
-                                                        ->count();
-            
+                ->whereNull('speaker_id')
+                ->count();
+
             if ($unassignedParticipants > 0) {
                 throw new Exception('All participants must be assigned speaker positions');
             }
 
             Log::info('Debate preparation completed successfully', ['debate_id' => $debate->id]);
-            
+
             DB::commit();
             return ['success' => true, 'message' => 'Debate preparation completed successfully'];
-            
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to prepare debate', [
@@ -383,7 +446,7 @@ class DebateService
     public function submitResults(Debate $debate, array $data): array
     {
         DB::beginTransaction();
-        
+
         try {
             if ($debate->status !== 'ongoing') {
                 throw new Exception('Can only submit results for ongoing debates');
@@ -401,8 +464,8 @@ class DebateService
             if (isset($data['ranks'])) {
                 foreach ($data['ranks'] as $teamNumber => $rank) {
                     ParticipantsDebater::where('debate_id', $debate->id)
-                                      ->where('team_number', $teamNumber)
-                                      ->update(['rank' => $rank]);
+                        ->where('team_number', $teamNumber)
+                        ->update(['rank' => $rank]);
                 }
             }
 
@@ -413,7 +476,6 @@ class DebateService
 
             DB::commit();
             return ['success' => true, 'message' => 'Results submitted successfully'];
-            
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error("Failed to submit results for debate {$debate->id}: {$e->getMessage()}");
@@ -428,22 +490,22 @@ class DebateService
     {
         $results = [];
         $currentTime = Carbon::now();
-        
+
         // Get debates that should move to preparation phase
         $debates = Debate::where('status', 'teamsConfirmed')
-                         ->whereDate('start_date', $currentTime->toDateString())
-                         ->get()
-                         ->filter(function ($debate) use ($currentTime) {
-                             $startTime = Carbon::parse($debate->start_date . ' ' . $debate->start_time);
-                             $minutesUntilStart = $currentTime->diffInMinutes($startTime, false);
-                             return $minutesUntilStart <= 15 && $minutesUntilStart > 0;
-                         });
+            ->whereDate('start_date', $currentTime->toDateString())
+            ->get()
+            ->filter(function ($debate) use ($currentTime) {
+                $startTime = Carbon::parse($debate->start_date . ' ' . $debate->start_time);
+                $minutesUntilStart = $currentTime->diffInMinutes($startTime, false);
+                return $minutesUntilStart <= 15 && $minutesUntilStart > 0;
+            });
 
         foreach ($debates as $debate) {
             try {
                 $debate->update(['status' => 'debatePreparation']);
                 $results[] = ['debate_id' => $debate->id, 'success' => true];
-                
+
                 Log::info("Debate {$debate->id} moved to preparation phase");
             } catch (Exception $e) {
                 $results[] = ['debate_id' => $debate->id, 'success' => false, 'error' => $e->getMessage()];

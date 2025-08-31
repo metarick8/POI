@@ -124,17 +124,80 @@ class DebateController extends Controller
     public function finish(Request $request, Debate $debate)
     {
         $request->validate([
-            'winner' => 'required|string',
             'summary' => 'required|string',
+            'ranks' => 'required|array|size:4',
+            'ranks.*' => 'integer|min:1|max:4',
         ]);
-        $result = $this->debateService->finish($debate, $request->winner, $request->summary);
 
-        if (is_string($result))
+        $ranks = $request->input('ranks'); // Expecting array like [team_number => rank, ...]
+        $result = $this->debateService->finish($debate, $request->summary, $ranks);
+
+        if (is_string($result)) {
             return $this->errorResponse('Failed to finish debate: ' . $result, '', [], 500);
+        }
 
         return $this->successResponse('Debate finished successfully', new DebateResource($result));
     }
 
+    /**
+     * Get debaters and their teams for a debate
+     */
+    public function getDebaters(Request $request, Debate $debate)
+    {
+        try {
+            // Load participants with their speaker and team details
+             $participants = $debate->participantsDebaters()
+                ->with(['debater.user', 'speaker.team'])
+                ->get();
+
+            if ($participants->count() !== 8) {
+                return $this->errorResponse(
+                    'Debate must have exactly 8 debaters',
+                    null,
+                    ['error' => 'Invalid debater count'],
+                    422
+                );
+            }
+
+            // Group participants by team_number
+            $teams = $participants->groupBy('team_number')->map(function ($teamParticipants) {
+                return [
+                    'team_number' => $teamParticipants->first()->team_number,
+                    'team_role' => $teamParticipants->first()->speaker->team->role,
+                    'debaters' => $teamParticipants->map(function ($participant) {
+                        return [
+                            'debater_id' => $participant->debater_id,
+                            'name' => $participant->debater->user->first_name . ' ' .  $participant->debater->user->last_name ?? 'Unknown',
+                            'speaker_position' => $participant->speaker->position,
+                        ];
+                    })->toArray(),
+                ];
+            })->values();
+
+            if ($teams->count() !== 4) {
+                return $this->errorResponse(
+                    'Debate must have exactly 4 teams',
+                    null,
+                    ['error' => 'Invalid team count'],
+                    422
+                );
+            }
+
+            return $this->successResponse('Debaters retrieved successfully', $teams);
+        } catch (\Exception $e) {
+            Log::error('Error retrieving debaters', [
+                'debate_id' => $debate->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->errorResponse(
+                'An error occurred while retrieving debaters',
+                null,
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
     // public function toDebatePreparationStatus(debatePreparationRequest $request)
     // {
 
@@ -202,7 +265,6 @@ class DebateController extends Controller
             }
 
             return $this->successResponse($result['message'], new DebateResource($debate->fresh()));
-
         } catch (\Exception $e) {
             Log::error('Error assigning teams', [
                 'debate_id' => $debate->id,
@@ -240,7 +302,6 @@ class DebateController extends Controller
             }
 
             return $this->successResponse($result['message'], null);
-
         } catch (\Exception $e) {
             Log::error('Error adding panelist judge', [
                 'debate_id' => $debate->id,
@@ -306,7 +367,6 @@ class DebateController extends Controller
             }
 
             return $this->successResponse($result['message'], new DebateResource($debate->fresh()));
-
         } catch (\Exception $e) {
             Log::error('Error submitting results', [
                 'debate_id' => $debate->id,
@@ -330,18 +390,17 @@ class DebateController extends Controller
     {
         try {
             $participants = $debate->participantsDebaters()
-                                  ->with([
-                                      'debaterUser:id,name',
-                                      'speaker:id,position,team_id'
-                                  ])
-                                  ->get()
-                                  ->groupBy('team_number');
+                ->with([
+                    'debaterUser:id,name',
+                    'speaker:id,position,team_id'
+                ])
+                ->get()
+                ->groupBy('team_number');
 
             return $this->successResponse(
                 'Participants retrieved successfully',
                 $participants
             );
-
         } catch (\Exception $e) {
             Log::error('Error getting participants', [
                 'debate_id' => $debate->id,
@@ -377,22 +436,21 @@ class DebateController extends Controller
 
             // Panelist judges
             $judges['panelists'] = $debate->panelistJudges()
-                                         ->with('judge.user:id,name')
-                                         ->get()
-                                         ->map(function($panelist) {
-                                             return [
-                                                 'judge_id' => $panelist->judge_id,
-                                                 'user_id' => $panelist->judge->user_id ?? null,
-                                                 'name' => $panelist->judge->user->name ?? null,
-                                                 'type' => 'panelist'
-                                             ];
-                                         });
+                ->with('judge.user:id,name')
+                ->get()
+                ->map(function ($panelist) {
+                    return [
+                        'judge_id' => $panelist->judge_id,
+                        'user_id' => $panelist->judge->user_id ?? null,
+                        'name' => $panelist->judge->user->name ?? null,
+                        'type' => 'panelist'
+                    ];
+                });
 
             return $this->successResponse(
                 'Judges retrieved successfully',
                 $judges
             );
-
         } catch (\Exception $e) {
             Log::error('Error getting judges', [
                 'debate_id' => $debate->id,
@@ -420,7 +478,6 @@ class DebateController extends Controller
                 'Preparation phase check completed',
                 $results
             );
-
         } catch (\Exception $e) {
             Log::error('Error checking preparation phase', [
                 'error' => $e->getMessage()
