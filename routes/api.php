@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\Debate\ApplicationController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\DebateController;
 use App\Http\Controllers\FacultyController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\JudgeController;
+use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MotionController;
 use App\Http\Controllers\SubClassificationController;
 use App\Http\Middleware\JwtMiddleware;
@@ -58,6 +60,10 @@ Route::middleware([AuthenticateAdmin::class])->group(function () {
     Route::get('debates/{debate}/teams/index', [TeamController::class, 'listTeams']);
     Route::get('getJudgeRates/{judge_id}', [JudgeController::class, 'getJudgeRates']);
     Route::get('getJudgeRatesByDebate/{debateId}', [JudgeController::class, 'getJudgeRatesByDebate']);
+    Route::post('/articles', [ArticleController::class, 'store']);
+    Route::delete('/articles/{article}', [ArticleController::class, 'destroy']);
+    Route::get('/admin/articles', [ArticleController::class, 'index']);
+    Route::get('/admin/articles/{article}', [ArticleController::class, 'show']);
 });
 
 // Debate-related routes (consolidated)
@@ -157,3 +163,16 @@ Route::get('zoom/test', function () {
     $token = json_decode($response->getBody(), true)['access_token'];
     return $token;
 });
+
+
+Route::middleware(JwtMiddleware::class)->group(function () {
+       // Like routes
+    Route::post('/articles/{article}/like', [LikeController::class, 'like']);
+    Route::delete('/articles/{article}/unlike', [LikeController::class, 'unlike']);
+
+    Route::get('/articles', [ArticleController::class, 'index']);
+    Route::get('/articles/{article}', [ArticleController::class, 'show']);
+
+ 
+});
+
